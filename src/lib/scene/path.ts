@@ -113,3 +113,32 @@ export const PATH_POINTS: readonly [number, number, number][] = [
 	[6, 1.6, -48],
 	[18, 1.6, -48],
 ];
+
+type Vec3 = readonly [number, number, number];
+
+/** Fraction (0..1) of the polyline's length at the point nearest to `target`. */
+export function polylineU(points: readonly Vec3[], target: Vec3): number {
+	let walked = 0;
+	let best = { dist: Number.POSITIVE_INFINITY, at: 0 };
+	for (let i = 1; i < points.length; i++) {
+		const a = points[i - 1];
+		const b = points[i];
+		const ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+		const len2 = ab[0] ** 2 + ab[1] ** 2 + ab[2] ** 2;
+		const len = Math.sqrt(len2);
+		const t =
+			len2 === 0
+				? 0
+				: clamp(
+						((target[0] - a[0]) * ab[0] + (target[1] - a[1]) * ab[1] + (target[2] - a[2]) * ab[2]) /
+							len2,
+						0,
+						1,
+					);
+		const p = [a[0] + ab[0] * t, a[1] + ab[1] * t, a[2] + ab[2] * t];
+		const dist = Math.hypot(target[0] - p[0], target[1] - p[1], target[2] - p[2]);
+		if (dist < best.dist) best = { dist, at: walked + len * t };
+		walked += len;
+	}
+	return walked === 0 ? 0 : best.at / walked;
+}

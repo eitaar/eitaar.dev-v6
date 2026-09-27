@@ -12,6 +12,7 @@ import {
 	isAnchorName,
 	nextZone,
 	pointerLook,
+	polylineU,
 	scrollToU,
 } from "./path";
 
@@ -209,5 +210,21 @@ describe("depthsExposure", () => {
 	});
 	it("never goes fully black", () => {
 		expect(depthsExposure(1)).toBeGreaterThan(0);
+	});
+});
+
+describe("polylineU", () => {
+	const line = [
+		[0, 0, 0],
+		[10, 0, 0],
+		[10, 0, 10],
+	] as const;
+	it("is 0 at the start and 1 at the end", () => {
+		expect(polylineU(line, [0, 0, 0])).toBe(0);
+		expect(polylineU(line, [10, 0, 10])).toBe(1);
+	});
+	it("projects a point onto the nearest segment", () => {
+		expect(polylineU(line, [5, 3, 0])).toBeCloseTo(0.25);
+		expect(polylineU(line, [12, 0, 5])).toBeCloseTo(0.75);
 	});
 });
