@@ -126,3 +126,67 @@
 	border: 1px solid var(--border);
 	background-color: color-mix(in oklab, var(--bg) 88%, transparent);
 }
+
+/* ─── Zones: Poolrooms vs Alley colours, switched once, never per frame ─── */
+:root {
+	--text-now: var(--content);
+	--surface-now: var(--bg);
+}
+
+:root[data-zone="alley"] {
+	--text-now: var(--content-alley);
+	--surface-now: var(--bg-alley);
+	--muted: #a4a7ab;
+	--border: #3a3d41;
+}
+
+body {
+	color: var(--text-now);
+	transition: color 0.6s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	body,
+	.panel {
+		transition: none;
+	}
+}
+
+/* ─── Scene background (see ADR 0001) ─── */
+.scene-bg {
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+}
+
+.scene-bg > * {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+}
+
+/* Placeholder Poolrooms: tile grid over pale aqua. Plan C swaps in a static render. */
+.scene-bg__static {
+	background-color: #eef6f7;
+	background-image:
+		linear-gradient(to right, rgb(0 0 0 / 0.06) 1px, transparent 1px),
+		linear-gradient(to bottom, rgb(0 0 0 / 0.06) 1px, transparent 1px);
+	background-size: 48px 48px;
+}
+
+.scene-bg__alley {
+	background-color: var(--bg-alley);
+	opacity: 0;
+}
+
+[data-scene="scene"] .scene-bg__static,
+[data-scene="scene"] .scene-bg__alley {
+	display: none;
+}
+
+.panel {
+	background-color: color-mix(in oklab, var(--surface-now) 88%, transparent);
+	transition: background-color 0.6s ease;
+}

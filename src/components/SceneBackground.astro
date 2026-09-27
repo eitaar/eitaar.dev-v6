@@ -1,0 +1,26 @@
+<div class="scene-bg" aria-hidden="true">
+	<div class="scene-bg__static"></div>
+	<div class="scene-bg__alley"></div>
+	<canvas class="scene-bg__canvas" hidden></canvas>
+</div>
+
+<script>
+	import { gsap } from "gsap";
+	import { alleyFactor, nextZone, type Zone } from "../lib/scene/path";
+	import { trackScrollU } from "../lib/scene/scroll";
+
+	const root = document.documentElement;
+	const alley = document.querySelector<HTMLElement>(".scene-bg__alley");
+	const setAlleyOpacity = alley ? gsap.quickSetter(alley, "opacity") : () => {};
+	let zone: Zone = "pool";
+
+	trackScrollU((u) => {
+		const factor = alleyFactor(u);
+		setAlleyOpacity(factor);
+		const next = nextZone(zone, factor);
+		if (next !== zone) {
+			zone = next;
+			root.dataset.zone = zone;
+		}
+	});
+</script>
