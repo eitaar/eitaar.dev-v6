@@ -1,0 +1,155 @@
+import { describe, expect, it } from "vitest";
+import {
+	ALLEY_END,
+	ALLEY_START,
+	ANCHOR_U,
+	alleyFactor,
+	buildScrollAnchors,
+	damp,
+	isAnchorName,
+	nextZone,
+	pointerLook,
+	scrollToU,
+} from "./path";
+
+describe("isAnchorName", () => {
+	it("accepts the three Anchors", () => {
+		expect(["entrance", "pool", "turn"].every(isAnchorName)).toBe(true);
+	});
+	it("rejects typos and missing values", () => {
+		expect(isAnchorName("pol")).toBe(false);
+		expect(isAnchorName(undefined)).toBe(false);
+	});
+});
+
+describe("buildScrollAnchors", () => {
+	it("maps sections to their Anchor u between page top and bottom", () => {
+		const anchors = buildScrollAnchors(
+			[
+				{ name: "entrance", top: 0 },
+				{ name: "pool", top: 1000 },
+				{ name: "turn", top: 3000 },
+			],
+			4000,
+		);
+		expect(anchors).toEqual([
+			{ scroll: 0, u: 0 },
+			{ scroll: 1000, u: ANCHOR_U.pool },
+			{ scroll: 3000, u: ANCHOR_U.turn },
+			{ scroll: 4000, u: 1 },
+		]);
+	});
+
+	it("zero-height page: a single anchor at the start", () => {
+		const anchors = buildScrollAnchors(
+			[
+				{ name: "pool", top: 0 },
+				{ name: "turn", top: 0 },
+			],
+			0,
+		);
+		expect(anchors).toEqual([{ scroll: 0, u: 0 }]);
+		expect(scrollToU(0, anchors)).toBe(0);
+	});
+
+	it("collapsed anchors: later Anchor wins, bottom still reaches u = 1", () => {
+		const anchors = buildScrollAnchors(
+			[
+				{ name: "pool", top: 1000 },
+				{ name: "turn", top: 5000 },
+			],
+			2000,
+		);
+		expect(anchors).toEqual([
+			{ scroll: 0, u: 0 },
+			{ scroll: 1000, u: ANCHOR_U.pool },
+			{ scroll: 2000, u: 1 },
+		]);
+	});
+
+	it("missing sections: falls back to a straight 0→1 mapping", () => {
+		expect(buildScrollAnchors([], 500)).toEqual([
+			{ scroll: 0, u: 0 },
+			{ scroll: 500, u: 1 },
+		]);
+	});
+
+	it("clamps negative tops to the page start", () => {
+		const anchors = buildScrollAnchors([{ name: "pool", top: -200 }], 1000);
+		expect(anchors[0]).toEqual({ scroll: 0, u: 0 });
+		expect(anchors.every((a) => a.scroll >= 0)).toBe(true);
+	});
+});
+
+describe("scrollToU", () => {
+	const anchors = [
+		{ scroll: 0, u: 0 },
+		{ scroll: 1000, u: 0.3 },
+		{ scroll: 2000, u: 1 },
+	];
+	it("interpolates within a segment", () => {
+		expect(scrollToU(500, anchors)).toBeCloseTo(0.15);
+		expect(scrollToU(1500, anchors)).toBeCloseTo(0.65);
+	});
+	it("clamps outside the range", () => {
+		expect(scrollToU(-50, anchors)).toBe(0);
+		expect(scrollToU(99999, anchors)).toBe(1);
+	});
+	it("returns 0 with no anchors", () => {
+		expect(scrollToU(100, [])).toBe(0);
+	});
+});
+
+describe("alleyFactor", () => {
+	it("is 0 in Poolrooms and 1 deep in the Alley", () => {
+		expect(alleyFactor(0)).toBe(0);
+		expect(alleyFactor(ALLEY_START)).toBe(0);
+		expect(alleyFactor(ALLEY_END)).toBe(1);
+		expect(alleyFactor(1)).toBe(1);
+	});
+	it("rises smoothly in between", () => {
+		const mid = alleyFactor((ALLEY_START + ALLEY_END) / 2);
+		expect(mid).toBeCloseTo(0.5);
+	});
+});
+
+describe("nextZone", () => {
+	it("enters the Alley once the factor passes the upper threshold", () => {
+		expect(nextZone("pool", 0.54)).toBe("pool");
+		expect(nextZone("pool", 0.55)).toBe("alley");
+	});
+	it("hysteresis: hovering around 0.5 does not flicker", () => {
+		expect(nextZone("alley", 0.5)).toBe("alley");
+		expect(nextZone("pool", 0.5)).toBe("pool");
+	});
+	it("returns to Poolrooms below the lower threshold", () => {
+		expect(nextZone("alley", 0.45)).toBe("pool");
+	});
+});
+
+describe("pointerLook", () => {
+	it("is neutral at the centre", () => {
+		expect(pointerLook(0, 0)).toEqual({ yaw: 0, pitch: 0 });
+	});
+	it("clamps input outside [-1, 1]", () => {
+		expect(pointerLook(5, -5)).toEqual(pointerLook(1, -1));
+	});
+	it("looks toward the pointer (right → negative yaw, down → negative pitch)", () => {
+		const { yaw, pitch } = pointerLook(1, 1);
+		expect(yaw).toBeLessThan(0);
+		expect(pitch).toBeLessThan(0);
+	});
+});
+
+describe("damp", () => {
+	it("moves toward the target without overshooting", () => {
+		const next = damp(0, 1, 4, 1 / 60);
+		expect(next).toBeGreaterThan(0);
+		expect(next).toBeLessThan(1);
+	});
+	it("is frame-rate independent", () => {
+		let a = 0;
+		for (let i = 0; i < 2; i++) a = damp(a, 1, 4, 1 / 60);
+		expect(a).toBeCloseTo(damp(0, 1, 4, 2 / 60));
+	});
+});
