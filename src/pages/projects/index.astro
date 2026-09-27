@@ -2,9 +2,9 @@
 import { getCollection } from "astro:content";
 import Project from "../../components/Project.astro";
 import Layout from "../../layouts/Layout.astro";
+import { byNewest } from "../../lib/content";
 
-const rawProjects = await getCollection("projects");
-const projects = rawProjects.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+const projects = (await getCollection("projects")).sort(byNewest);
 ---
 
 <Layout title="projects" description="list of my project">

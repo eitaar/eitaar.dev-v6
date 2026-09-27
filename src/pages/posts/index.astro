@@ -2,9 +2,9 @@
 import { getCollection } from "astro:content";
 import Post from "../../components/Post.astro";
 import Layout from "../../layouts/Layout.astro";
+import { byNewest } from "../../lib/content";
 
-const rawPosts = await getCollection("posts");
-const posts = rawPosts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+const posts = (await getCollection("posts")).sort(byNewest);
 ---
 
 <Layout title="Posts" description="Articles, notes, and things I have learned.">

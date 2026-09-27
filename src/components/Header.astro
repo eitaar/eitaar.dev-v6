@@ -1,7 +1,10 @@
 ---
+import { getCollection } from "astro:content";
+import { hasPosts } from "../lib/content";
+
 const NAV_LINKS = [
 	{ text: "Projects", url: "/projects" },
-	{ text: "Posts", url: "/posts" },
+	...(hasPosts(await getCollection("posts")) ? [{ text: "Posts", url: "/posts" }] : []),
 ];
 ---
 

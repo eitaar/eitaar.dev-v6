@@ -8,11 +8,9 @@ import Project from "../components/Project.astro";
 import { contacts } from "../data/contacts";
 import { skillGroups } from "../data/skills";
 import Layout from "../layouts/Layout.astro";
+import { featuredProjects } from "../lib/content";
 
-const projects = await getCollection("projects");
-const topProjects = projects
-	.filter((project) => project.data.topProject)
-	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+const topProjects = featuredProjects(await getCollection("projects"));
 
 const bigContacts = contacts.filter((c) => c.big);
 const smallContacts = contacts.filter((c) => !c.big);

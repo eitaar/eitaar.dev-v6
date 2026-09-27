@@ -2,6 +2,7 @@
 import { Image } from "astro:assets";
 import { getCollection, render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
+import { projectLinks } from "../../lib/content";
 
 export async function getStaticPaths() {
 	const projects = await getCollection("projects");
@@ -12,7 +13,7 @@ export async function getStaticPaths() {
 }
 
 const project = Astro.props;
-const { title, summary, techStack, repoUrl, demoUrl, pubDate, heroImage } = project.data;
+const { title, summary, techStack, pubDate, heroImage } = project.data;
 const { Content } = await render(project);
 const formattedDate = pubDate.toLocaleDateString("en-US", {
 	year: "numeric",
@@ -20,13 +21,12 @@ const formattedDate = pubDate.toLocaleDateString("en-US", {
 	day: "2-digit",
 });
 
-const meta = [
-	demoUrl && { label: "Website", value: demoUrl, url: demoUrl },
-	repoUrl && { label: "Repository", value: new URL(repoUrl).pathname.slice(1), url: repoUrl },
+const meta: { label: string; value: string; url?: string }[] = [
+	...projectLinks(project.data),
 	{ label: "Category", value: project.data.category },
 	{ label: "Last Updated", value: formattedDate },
 	{ label: "Tech Stack", value: techStack.join(", ") },
-].filter(Boolean) as { label: string; value: string; url?: string }[];
+];
 ---
 
 <Layout title={title} description={summary}>
@@ -78,8 +78,8 @@ const meta = [
 			}
 		</dl>
 
-		<!-- <div class="w-full pt-8 text-base text-pretty md:text-lg [&>*+*]:mt-6">
+		<div class="post-content w-full max-w-3xl pt-8">
 			<Content />
-		</div> -->
+		</div>
 	</div>
 </Layout>
