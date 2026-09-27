@@ -1,7 +1,8 @@
 import { gsap } from "gsap";
 import * as THREE from "three";
-import { damp, depthsFactor, PATH_POINTS, pointerLook } from "./path";
-import { createPoolrooms } from "./poolrooms";
+import { createPathCamera } from "./camera";
+import { damp, depthsExposure, depthsFactor, pointerLook } from "./path";
+import { loadPoolrooms, type Poolrooms, SCENE_URL } from "./poolrooms";
 
 export interface SceneHandle {
 	setU(u: number): void;
@@ -10,27 +11,31 @@ export interface SceneHandle {
 
 const FOLLOW = 4;
 
-export function mountScene(
+export async function mountScene(
 	canvas: HTMLCanvasElement,
 	initialU: number,
 	onContextLost: () => void,
-): SceneHandle {
+	url: string = SCENE_URL,
+): Promise<SceneHandle> {
 	const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+	renderer.toneMapping = THREE.AgXToneMapping;
 
-	const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
-	const world = createPoolrooms();
-	const curve = new THREE.CatmullRomCurve3(
-		PATH_POINTS.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
-	);
+	let world: Poolrooms;
+	try {
+		world = await loadPoolrooms(url);
+	} catch (error) {
+		renderer.dispose();
+		throw error;
+	}
+
+	const camera = new THREE.PerspectiveCamera(60, 1, 0.05, 200);
+	const pathCamera = createPathCamera(world.path);
 
 	let targetU = initialU;
 	let u = initialU;
 	const look = { yaw: 0, pitch: 0 };
 	let lookTarget = { yaw: 0, pitch: 0 };
-	const position = new THREE.Vector3();
-	const tangent = new THREE.Vector3();
-	const lookAt = new THREE.Vector3();
 
 	const resize = () => {
 		renderer.setSize(window.innerWidth, window.innerHeight, false);
@@ -51,15 +56,11 @@ export function mountScene(
 		u = damp(u, targetU, FOLLOW, dt);
 		look.yaw = damp(look.yaw, lookTarget.yaw, FOLLOW, dt);
 		look.pitch = damp(look.pitch, lookTarget.pitch, FOLLOW, dt);
+		pathCamera.place(camera, u, look);
 
-		curve.getPointAt(u, position);
-		curve.getTangentAt(u, tangent);
-		camera.position.copy(position);
-		camera.lookAt(lookAt.copy(position).add(tangent));
-		camera.rotateY(look.yaw);
-		camera.rotateX(look.pitch);
-
-		world.setDepths(depthsFactor(u));
+		const factor = depthsFactor(u);
+		world.setDepths(factor);
+		renderer.toneMappingExposure = depthsExposure(factor);
 		world.update(time);
 		renderer.render(world.scene, camera);
 	};

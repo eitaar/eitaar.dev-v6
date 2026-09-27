@@ -104,16 +104,6 @@ export function damp(current: number, target: number, lambda: number, dt: number
 	return target + (current - target) * Math.exp(-lambda * dt);
 }
 
-/** Camera path: down the Poolrooms hall (−z), then a turn into the Depths (+x). */
-export const PATH_POINTS: readonly [number, number, number][] = [
-	[0, 1.6, 0],
-	[0, 1.6, -20],
-	[0, 1.6, -38],
-	[1, 1.6, -46],
-	[6, 1.6, -48],
-	[18, 1.6, -48],
-];
-
 type Vec3 = readonly [number, number, number];
 
 /** Fraction (0..1) of the polyline's length at the point nearest to `target`. */

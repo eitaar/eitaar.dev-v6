@@ -21,7 +21,10 @@ FAR_WALL_Y = 92.0
 
 SECTIONS = [("PassageA", 0.0, 20.0, PASSAGE_R), ("Hall", 20.0, 40.0, HALL_R), ("PassageB", 40.0, 92.0, PASSAGE_R)]
 SIDE_OPENINGS = [9.0, 15.0, 50.0, 62.0, 74.0]
+OPEN_R = 0.9  # side-opening arch radius
+OPEN_SPRING = 1.0  # keeps the arch top (1.9 m) below the passage spring
 SKYLIGHTS = [26.0, 34.0]
+SKY_HALF = 0.8  # half length of a skylight gap along Y
 LADDERS = [(PASSAGE_R, 11.0), (HALL_R, 30.0), (PASSAGE_R, 56.0)]
 CAMERA_PATH = [(0.0, 1.0), (0.3, 14.0), (-0.4, 30.0), (0.2, 46.0), (-0.2, 62.0), (0.0, 78.0)]
 
@@ -118,17 +121,53 @@ def make_materials(variant):
     return {"Tile": tile, "Water": water, "Void": void, "Sky": sky, "Metal": metal}
 
 
-def build_section(name, y0, y1, radius, material, spring=SPRING):
-    """Vaulted passage: U surface extruded along +Y plus the submerged floor. UVs in TEX units."""
+def _spans(y0, y1, gaps):
+    """Split [y0, y1] around the (start, end) gaps."""
+    out, cursor = [], y0
+    for a, b in sorted(gaps):
+        if a > cursor:
+            out.append((cursor, a))
+        cursor = max(cursor, b)
+    if cursor < y1:
+        out.append((cursor, y1))
+    return out
+
+
+def _left_wall(bm, uv, x, y0, y1, spring, openings):
+    """Flat left wall (x = -radius) with arched side openings cut into it. u = height above the floor."""
+
+    def quad(pts):
+        verts = [bm.verts.new((x, y, z)) for y, z in pts]
+        _face(bm, uv, verts, [((z - FLOOR) / TEX, y / TEX) for y, z in pts])
+
+    arch = geo.u_profile(OPEN_R, OPEN_SPRING, FLOOR, 16)[1:-1]
+    for a, b in _spans(y0, y1, [(y - OPEN_R, y + OPEN_R) for y in openings]):
+        quad([(a, FLOOR), (a, spring), (b, spring), (b, FLOOR)])
+    for yc in openings:
+        for (pa, za), (pb, zb) in zip(arch, arch[1:]):
+            quad([(yc + pa, za), (yc + pb, zb), (yc + pb, spring), (yc + pa, spring)])
+
+
+def build_section(name, y0, y1, radius, material, spring=SPRING, left_openings=(), crown_gaps=()):
+    """Vaulted passage: U surface extruded along +Y plus the submerged floor. UVs in TEX units.
+    `left_openings` are Y centres of arched side openings in the left wall; `crown_gaps` are
+    (start, end) Y ranges left open at the top of the vault for skylights."""
     bm, uv = _new_bm()
     prof = geo.u_profile(radius, spring, FLOOR, SEG)
     lens = geo.arc_lengths(prof)
+    mid = len(prof) // 2
+    crown_faces = range(mid - 2, mid + 2)
     for i in range(len(prof) - 1):
+        if i == 0 and left_openings:
+            _left_wall(bm, uv, -radius, y0, y1, spring, left_openings)
+            continue
         (xa, za), (xb, zb) = prof[i], prof[i + 1]
-        verts = [bm.verts.new((xa, y0, za)), bm.verts.new((xb, y0, zb)),
-                 bm.verts.new((xb, y1, zb)), bm.verts.new((xa, y1, za))]
-        _face(bm, uv, verts, [(lens[i] / TEX, y0 / TEX), (lens[i + 1] / TEX, y0 / TEX),
-                              (lens[i + 1] / TEX, y1 / TEX), (lens[i] / TEX, y1 / TEX)])
+        spans = _spans(y0, y1, crown_gaps) if i in crown_faces else [(y0, y1)]
+        for ya, yb in spans:
+            verts = [bm.verts.new((xa, ya, za)), bm.verts.new((xb, ya, zb)),
+                     bm.verts.new((xb, yb, zb)), bm.verts.new((xa, yb, za))]
+            _face(bm, uv, verts, [(lens[i] / TEX, ya / TEX), (lens[i + 1] / TEX, ya / TEX),
+                                  (lens[i + 1] / TEX, yb / TEX), (lens[i] / TEX, yb / TEX)])
     floor = [bm.verts.new((-radius, y0, FLOOR)), bm.verts.new((-radius, y1, FLOOR)),
              bm.verts.new((radius, y1, FLOOR)), bm.verts.new((radius, y0, FLOOR))]
     _face(bm, uv, floor, [(-radius / TEX, y0 / TEX), (-radius / TEX, y1 / TEX),
@@ -177,62 +216,22 @@ def build_water(name, y0, y1, radius, material):
     return _mesh_object(name, bm, material)
 
 
-def _prism_x(name, y, profile, x0, x1, material):
-    """Closed prism along X whose cross-section (in the YZ plane) is `profile` offset to y."""
-    bm, uv = _new_bm()
-    ring0 = [bm.verts.new((x0, y + px, z)) for px, z in profile]
-    ring1 = [bm.verts.new((x1, y + px, z)) for px, z in profile]
-    n = len(profile)
-    for i in range(n):
-        j = (i + 1) % n
-        _face(bm, uv, [ring0[i], ring0[j], ring1[j], ring1[i]],
-              [((y + profile[i][0]) / TEX, profile[i][1] / TEX), ((y + profile[j][0]) / TEX, profile[j][1] / TEX),
-               ((y + profile[j][0]) / TEX, profile[j][1] / TEX + 1), ((y + profile[i][0]) / TEX, profile[i][1] / TEX + 1)])
-    _face(bm, uv, list(reversed(ring0)), [((y + px) / TEX, z / TEX) for px, z in reversed(profile)])
-    _face(bm, uv, ring1, [((y + px) / TEX, z / TEX) for px, z in profile])
-    return _mesh_object(name, bm, material)
-
-
-def _boolean(target, cutter):
-    mod = target.modifiers.new(f"Cut{cutter.name}", "BOOLEAN")
-    mod.operation = "DIFFERENCE"
-    mod.object = cutter
-    mod.solver = "EXACT"
-    mod.use_hole_tolerant = True
-    mod.material_mode = "TRANSFER"
-    cutter.hide_render = True
-    cutter.display_type = "WIRE"
-
-
-def _section_at(sections, y):
-    obj, _, _, radius = next(s for s in sections if s[1] < y < s[2])
-    return obj, radius
-
-
-def build_side_opening(index, y, sections, mats):
-    target, radius = _section_at(sections, y)
-    profile = geo.u_profile(1.1, 1.4, FLOOR + 0.02, 16)
-    cutter = _prism_x(f"SideCut{index}", y, profile, -radius - 0.6, -radius + 0.6, mats["Tile"])
-    _boolean(target, cutter)
-    stub = build_section(f"SideStub{index}", 0.0, 3.0, 1.1, mats["Void"], spring=1.4)
-    end = build_cap(f"SideStubEnd{index}", 3.0, 1.1, mats["Void"], spring=1.4)
+def build_side_stub(index, y, radius, mats):
+    """Dark tunnel behind a side opening, leading off to -X."""
+    stub = build_section(f"SideStub{index}", 0.0, 3.0, OPEN_R, mats["Void"], spring=OPEN_SPRING)
+    end = build_cap(f"SideStubEnd{index}", 3.0, OPEN_R, mats["Void"], spring=OPEN_SPRING)
     for obj in (stub, end):
         obj.rotation_euler = (0.0, 0.0, math.radians(90))  # local +Y becomes world -X
         obj.location = (-radius, y, 0.0)
 
 
-def build_skylight(index, y, hall, mats):
-    crown = SPRING + HALL_R
+def build_skylight(index, y, mats):
+    """Glowing panel above a crown gap in the hall vault."""
     bm, uv = _new_bm()
-    bmesh.ops.create_cube(bm, size=1.0)
-    for v in bm.verts:
-        v.co = Vector((v.co.x * 1.6, y + v.co.y * 1.6, crown + v.co.z * 2.0))
-    cutter = _mesh_object(f"SkyCut{index}", bm, mats["Tile"])
-    _boolean(hall, cutter)
-    bm, uv = _new_bm()
-    z = crown + 0.4
-    verts = [bm.verts.new((-0.8, y - 0.8, z)), bm.verts.new((0.8, y - 0.8, z)),
-             bm.verts.new((0.8, y + 0.8, z)), bm.verts.new((-0.8, y + 0.8, z))]
+    z = SPRING + HALL_R + 0.4
+    half_x = 1.3
+    verts = [bm.verts.new((-half_x, y - SKY_HALF - 0.2, z)), bm.verts.new((half_x, y - SKY_HALF - 0.2, z)),
+             bm.verts.new((half_x, y + SKY_HALF + 0.2, z)), bm.verts.new((-half_x, y + SKY_HALF + 0.2, z))]
     _face(bm, uv, verts, [(0, 0), (1, 0), (1, 1), (0, 1)])
     _mesh_object(f"SkyLight{index}", bm, mats["Sky"])
 
@@ -316,7 +315,12 @@ def build_scene(variant="classic"):
     mats = make_materials(variant)
     sections = []
     for name, y0, y1, radius in SECTIONS:
-        sections.append((build_section(name, y0, y1, radius, mats["Tile"]), y0, y1, radius))
+        openings = [y for y in SIDE_OPENINGS if y0 < y < y1] if radius == PASSAGE_R else []
+        gaps = [(y - SKY_HALF, y + SKY_HALF) for y in SKYLIGHTS if y0 < y < y1] if name == "Hall" else []
+        obj = build_section(name, y0, y1, radius, mats["Tile"], left_openings=openings, crown_gaps=gaps)
+        sections.append((obj, y0, y1, radius))
+        for i, y in enumerate(openings):
+            build_side_stub(SIDE_OPENINGS.index(y), y, radius, mats)
         build_water(f"Water{name}", y0, y1, radius, mats["Water"])
         if radius == PASSAGE_R:
             for i, y in enumerate(geo.module_positions(y0, y1, 6.0)):
@@ -329,11 +333,8 @@ def build_scene(variant="classic"):
     build_section("FarDoorway", FAR_WALL_Y + 0.2, FAR_WALL_Y + 4.0, 0.9, mats["Void"], spring=1.3)
     build_cap("FarDoorwayEnd", FAR_WALL_Y + 4.0, 0.9, mats["Void"], spring=1.3)
 
-    for i, y in enumerate(SIDE_OPENINGS):
-        build_side_opening(i, y, sections, mats)
-    hall = next(obj for obj, _, _, _ in sections if obj.name == "Hall")
     for i, y in enumerate(SKYLIGHTS):
-        build_skylight(i, y, hall, mats)
+        build_skylight(i, y, mats)
     for i, (radius, y) in enumerate(LADDERS):
         build_ladder(i, radius, y, mats["Metal"])
 
