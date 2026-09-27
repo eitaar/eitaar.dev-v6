@@ -4,7 +4,8 @@ export type BackgroundMode = "scene" | "static";
 
 export async function startBackground(deps: {
 	env: Environment;
-	mountScene: () => Promise<void>;
+	/** Receives `onLost`, to call if the scene dies after mounting (e.g. WebGL context loss). */
+	mountScene: (onLost: () => void) => Promise<void>;
 	setMode: (mode: BackgroundMode) => void;
 }): Promise<BackgroundMode> {
 	const { env, mountScene, setMode } = deps;
@@ -13,7 +14,7 @@ export async function startBackground(deps: {
 		return "static";
 	}
 	try {
-		await mountScene();
+		await mountScene(() => setMode("static"));
 		setMode("scene");
 		return "scene";
 	} catch (error) {

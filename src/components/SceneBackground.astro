@@ -32,9 +32,12 @@
 	if (canvas) {
 		startBackground({
 			env: readEnvironment(),
-			mountScene: async () => {
+			mountScene: async (onLost) => {
 				const { mountScene } = await import("../lib/scene/runtime");
-				const handle = mountScene(canvas, bridge.current());
+				const handle = mountScene(canvas, bridge.current(), () => {
+					canvas.hidden = true;
+					onLost();
+				});
 				bridge.connect((u) => handle.setU(u));
 				canvas.hidden = false;
 			},

@@ -140,6 +140,11 @@
 	--border: #3a3d41;
 }
 
+/* Safety net under the background layers: never white behind Alley text. */
+html {
+	background-color: var(--surface-now);
+}
+
 body {
 	color: var(--text-now);
 	transition: color 0.6s ease;

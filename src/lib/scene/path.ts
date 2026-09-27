@@ -17,14 +17,25 @@ export interface ScrollAnchor {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
+/** Scroll offset at which an Anchor's section fires: pool at mid-viewport, turn as it enters. */
+export function anchorTop(name: AnchorName, elementTop: number, viewportHeight: number): number {
+	return name === "turn" ? elementTop - viewportHeight : elementTop - viewportHeight * 0.5;
+}
+
+/**
+ * `minAlleyScroll` reserves scroll distance after the turn so the walk into the Alley
+ * is never squeezed into the last few pixels of the page.
+ */
 export function buildScrollAnchors(
 	sections: { name: AnchorName; top: number }[],
 	maxScroll: number,
+	minAlleyScroll = 0,
 ): ScrollAnchor[] {
 	const points: ScrollAnchor[] = [{ scroll: 0, u: 0 }];
 	for (const section of sections) {
 		if (section.name === "entrance") continue;
-		points.push({ scroll: clamp(section.top, 0, maxScroll), u: ANCHOR_U[section.name] });
+		const limit = section.name === "turn" ? Math.max(0, maxScroll - minAlleyScroll) : maxScroll;
+		points.push({ scroll: clamp(section.top, 0, limit), u: ANCHOR_U[section.name] });
 	}
 	points.push({ scroll: maxScroll, u: 1 });
 	points.sort((a, b) => a.u - b.u);

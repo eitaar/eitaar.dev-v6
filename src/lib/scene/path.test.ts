@@ -4,6 +4,7 @@ import {
 	ALLEY_START,
 	ANCHOR_U,
 	alleyFactor,
+	anchorTop,
 	buildScrollAnchors,
 	damp,
 	isAnchorName,
@@ -78,6 +79,36 @@ describe("buildScrollAnchors", () => {
 		const anchors = buildScrollAnchors([{ name: "pool", top: -200 }], 1000);
 		expect(anchors[0]).toEqual({ scroll: 0, u: 0 });
 		expect(anchors.every((a) => a.scroll >= 0)).toBe(true);
+	});
+});
+
+describe("anchorTop", () => {
+	it("pool triggers when its section reaches mid-viewport", () => {
+		expect(anchorTop("pool", 2000, 1000)).toBe(1500);
+	});
+	it("turn triggers as its section enters from the bottom of the viewport", () => {
+		expect(anchorTop("turn", 2000, 1000)).toBe(1000);
+	});
+});
+
+describe("buildScrollAnchors: Alley room", () => {
+	it("keeps at least minAlleyScroll between the turn and the page bottom", () => {
+		// 1920x1080 case from review: turn measured at 2112, maxScroll 2138.
+		const anchors = buildScrollAnchors(
+			[
+				{ name: "pool", top: 1000 },
+				{ name: "turn", top: 2112 },
+			],
+			2138,
+			540,
+		);
+		const turn = anchors.find((a) => a.u === ANCHOR_U.turn);
+		expect(turn?.scroll).toBe(1598);
+		expect(2138 - (turn?.scroll ?? 2138)).toBeGreaterThanOrEqual(540);
+	});
+	it("leaves a turn that already has room untouched", () => {
+		const anchors = buildScrollAnchors([{ name: "turn", top: 1000 }], 4000, 540);
+		expect(anchors.find((a) => a.u === ANCHOR_U.turn)?.scroll).toBe(1000);
 	});
 });
 

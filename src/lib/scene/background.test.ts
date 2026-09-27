@@ -47,6 +47,23 @@ describe("startBackground", () => {
 	});
 });
 
+describe("startBackground: context lost after mount", () => {
+	it("falls back to static when the mounted scene reports a lost context", async () => {
+		let loseContext: () => void = () => {};
+		const setMode = vi.fn();
+		await startBackground({
+			env: capable,
+			mountScene: async (onLost) => {
+				loseContext = onLost;
+			},
+			setMode,
+		});
+		expect(setMode).toHaveBeenLastCalledWith("scene");
+		loseContext();
+		expect(setMode).toHaveBeenLastCalledWith("static");
+	});
+});
+
 describe("createUBridge", () => {
 	it("late connect: receives the latest u pushed before connecting", () => {
 		const bridge = createUBridge();

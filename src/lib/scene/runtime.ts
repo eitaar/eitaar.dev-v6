@@ -10,7 +10,11 @@ export interface SceneHandle {
 
 const FOLLOW = 4;
 
-export function mountScene(canvas: HTMLCanvasElement, initialU: number): SceneHandle {
+export function mountScene(
+	canvas: HTMLCanvasElement,
+	initialU: number,
+	onContextLost: () => void,
+): SceneHandle {
 	const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
@@ -60,7 +64,14 @@ export function mountScene(canvas: HTMLCanvasElement, initialU: number): SceneHa
 		renderer.render(world.scene, camera);
 	};
 
+	// A lost context never comes back here: stop rendering and let the static background take over.
+	const onLost = () => {
+		gsap.ticker.remove(tick);
+		onContextLost();
+	};
+
 	resize();
+	canvas.addEventListener("webglcontextlost", onLost);
 	window.addEventListener("resize", resize);
 	window.addEventListener("pointermove", onPointer, { passive: true });
 	gsap.ticker.add(tick);
@@ -71,6 +82,7 @@ export function mountScene(canvas: HTMLCanvasElement, initialU: number): SceneHa
 		},
 		dispose() {
 			gsap.ticker.remove(tick);
+			canvas.removeEventListener("webglcontextlost", onLost);
 			window.removeEventListener("resize", resize);
 			window.removeEventListener("pointermove", onPointer);
 			world.dispose();

@@ -1,6 +1,6 @@
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { buildScrollAnchors, isAnchorName, type ScrollAnchor, scrollToU } from "./path";
+import { anchorTop, buildScrollAnchors, isAnchorName, type ScrollAnchor, scrollToU } from "./path";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -13,10 +13,15 @@ export function trackScrollU(onU: (u: number) => void): () => void {
 		const sections = [...document.querySelectorAll<HTMLElement>("[data-anchor]")].flatMap((el) => {
 			const name = el.dataset.anchor;
 			if (!isAnchorName(name)) return [];
-			const top = el.getBoundingClientRect().top + scrollY - window.innerHeight * 0.5;
+			const top = anchorTop(name, el.getBoundingClientRect().top + scrollY, window.innerHeight);
 			return [{ name, top }];
 		});
-		anchors = buildScrollAnchors(sections, ScrollTrigger.maxScroll(window));
+		// Reserve half a viewport of scroll for the walk into the Alley.
+		anchors = buildScrollAnchors(
+			sections,
+			ScrollTrigger.maxScroll(window),
+			window.innerHeight * 0.5,
+		);
 	};
 
 	const trigger = ScrollTrigger.create({
