@@ -44,7 +44,7 @@ Derived from Poolrooms: tile grout as grid/rules, white / pool-aqua / muted tone
 - **Models (Blender):** Poolrooms architecture, the Alley entrance (mostly unseen darkness), one symbolic object.
 - **Shaders:** water, fog, fluorescent flicker, film grain.
 - **Budget:** light enough for desktop integrated GPUs (low poly, baked lighting over real-time reflections, small textures).
-- **Stack:** plain Three.js + GSAP (see ADR 0001).
+- **Stack:** plain Three.js, no GSAP (see ADR 0001).
 
 ## Fallbacks
 

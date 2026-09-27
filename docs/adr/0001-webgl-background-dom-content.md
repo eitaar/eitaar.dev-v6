@@ -1,6 +1,6 @@
 # 3D is a fixed WebGL background; all content is DOM
 
-The homepage's poolrooms scene renders on a single fixed Three.js canvas behind the page, driven by scroll position (via GSAP) and a small amount of pointer look; every piece of readable content — headings, text, links — stays in ordinary scrolling DOM. We chose this over a fully 3D site (text drawn in-scene, camera-as-navigation) because the site's readers are developers who come to read Writeups and Posts, and DOM content keeps text selectable, indexable and accessible while the scene supplies atmosphere.
+The homepage's poolrooms scene renders on a single fixed Three.js canvas behind the page, driven by scroll position (mapped through a few Anchors) and a small amount of pointer look; every piece of readable content — headings, text, links — stays in ordinary scrolling DOM. We chose this over a fully 3D site (text drawn in-scene, camera-as-navigation) because the site's readers are developers who come to read Writeups and Posts, and DOM content keeps text selectable, indexable and accessible while the scene supplies atmosphere.
 
 ## Consequences
 
@@ -9,4 +9,4 @@ The homepage's poolrooms scene renders on a single fixed Three.js canvas behind 
 
 ## Considered Options
 
-- **TresJS / Threlte / React Three Fiber**: rejected. There is one scene and one camera path, so a declarative component tree adds a framework dependency without paying for itself; plain Three.js plus the GSAP already in use is lighter and gives full control.
+- **TresJS / Threlte / React Three Fiber**: rejected. There is one scene and one camera path, so a declarative component tree adds a framework dependency without paying for itself; plain Three.js is lighter and gives full control. GSAP is not used either: v5 depended on it but never imported it, and piecewise-linear Anchor mapping plus exponential damping covers the scroll sync.
