@@ -6,20 +6,6 @@
 	--color-content: var(--content);
 	--color-muted: var(--muted);
 	--color-border: var(--border);
-
-	--animate-motionspin: motionspin 7s cubic-bezier(0.12, 1, 0.2, 1);
-
-	@keyframes motionspin {
-		0% {
-			transform: rotate(0deg);
-		}
-		75% {
-			transform: rotate(1800deg);
-		}
-		100% {
-			transform: rotate(1800deg);
-		}
-	}
 }
 
 /* ─── Scroll reveal (blur-in + stagger) ─── */
@@ -132,4 +118,11 @@
 	.post-content {
 		font-size: 1.125rem;
 	}
+}
+
+/* ─── Panels: content surfaces over the background ─── */
+/* No backdrop-filter: the canvas behind re-renders every frame (ADR 0001). */
+.panel {
+	border: 1px solid var(--border);
+	background-color: color-mix(in oklab, var(--bg) 88%, transparent);
 }

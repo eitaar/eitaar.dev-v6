@@ -1,181 +1,71 @@
 ---
-import { Picture } from "astro:assets";
 import { getCollection } from "astro:content";
-import avatarImg from "../assets/img/avatar.png";
-import ArrowSvg from "../assets/svg/arrow.svg";
-import PixelIcon from "../assets/svg/bottle.svg";
 import Project from "../components/Project.astro";
 import { contacts } from "../data/contacts";
 import { skillGroups } from "../data/skills";
 import Layout from "../layouts/Layout.astro";
-import { featuredProjects } from "../lib/content";
+import { featuredProjects, hasPosts } from "../lib/content";
 
-const topProjects = featuredProjects(await getCollection("projects"));
-
-const bigContacts = contacts.filter((c) => c.big);
-const smallContacts = contacts.filter((c) => !c.big);
+const featured = featuredProjects(await getCollection("projects"));
+const showPosts = hasPosts(await getCollection("posts"));
 ---
 
 <Layout title="eitaar" description="eitaar's portfolio">
-	<div
-		class="flex min-h-screen w-full flex-col-reverse items-center justify-center gap-4 border-border text-center lg:flex-row-reverse lg:items-center lg:justify-between lg:gap-0 lg:text-left lg:px-40"
-	>
-		<div class="flex flex-col items-center justify-center gap-5 lg:items-start">
-			<h1 class=" text-7xl leading-none tracking-tight md:text-8xl lg:text-9xl">
-				eitaar
-			</h1>
-			<p class=" text-base tracking-wide text-muted md:text-lg lg:text-xl">
-				Software Developer / Student
-			</p>
+	<section data-anchor="entrance" class="flex min-h-[100dvh] flex-col justify-center gap-4">
+		<h1 class="text-7xl leading-none font-bold tracking-tight md:text-8xl lg:text-9xl">eitaar</h1>
+		<p class="text-base tracking-wide text-muted md:text-lg lg:text-xl">
+			Software Developer / Student
+		</p>
+	</section>
+
+	<section class="panel my-24 flex flex-col gap-6 p-8 md:p-12">
+		<h2 class="text-4xl leading-none font-bold md:text-5xl">About</h2>
+		<p class="text-base text-pretty md:text-lg lg:text-xl">
+			I'm a student in the UK. I play with little projects that link separate things, mostly to find
+			out whether they hold up once they're running. A lot of it is just me following a thought and
+			seeing where it lands.
+		</p>
+		<p class="text-base text-pretty md:text-lg lg:text-xl">
+			Off the keyboard, I tend to disappear into books and comics, or just listen to music.
+		</p>
+	</section>
+
+	<section data-anchor="pool" class="panel my-24 flex flex-col gap-8 p-8 md:p-12">
+		<h2 class="text-4xl leading-none font-bold md:text-5xl">Featured Projects</h2>
+		<div class="flex w-full flex-col">
+			{featured.map((project, i) => <Project project={project} index={i + 1} />)}
 		</div>
-		<Picture
-			class="h-48 w-48 transition-opacity duration-300 md:h-64 md:w-64 lg:h-96 lg:w-96 dark:opacity-75 rounded-full" 
-			src={avatarImg}
-			alt="avatar image"
-			fetchpriority="high"
-			loading="eager"
-			formats={["avif", "webp"]}
-			quality="mid"
-			widths={[192, 256, 384, 512, 768]}
-			sizes="(max-width: 767px) 192px, (max-width: 1023px) 256px, 384px"
-		/>
-	</div>
-	<div
-		class="reveal flex w-full flex-col items-start justify-start gap-8 border-border py-20 md:gap-12 md:py-28 lg:gap-16 lg:py-36"
-	>
-		<h2
-			class="reveal-item text-4xl leading-none tracking-wide md:text-5xl lg:text-6xl"
-			style="--reveal-i: 0"
-		>
-			About
-		</h2>
-		<div
-			class="reveal-item flex flex-col gap-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-11"
-			style="--reveal-i: 1"
-		>
-			<div class="flex flex-col gap-4 lg:col-span-9">
-				<p class="text-base text-pretty md:text-lg lg:text-xl">
-					I'm a student in the UK. I play with little projects that link separate things, mostly to find out whether they hold up once they're running. A lot of it is just me following a thought and seeing where it lands.
-				</p>
-				<p class="text-base text-pretty md:text-lg lg:text-xl">
-					Off the keyboard, I tend to disappear into books and comics, or just listen to music.
-				</p>
-			</div>
-			<PixelIcon
-				aria-label="pixel art icon"
-				class="text-text hidden w-24 animate-motionspin fill-current md:w-32 lg:col-span-3 lg:block lg:w-auto"
-			/>
-		</div>
-	</div>
-	<div
-		class="reveal flex w-full flex-col items-start justify-start gap-8 border-border py-20 md:gap-12 md:py-28 lg:gap-16 lg:py-36"
-	>
-		<h2
-			class="reveal-item text-4xl leading-none tracking-wide md:text-5xl lg:text-6xl"
-			style="--reveal-i: 0"
-		>
-			Skills
-		</h2>
-		<ul class="grid w-full grid-cols-2 gap-y-8 lg:grid-cols-4 lg:gap-y-0">
+		<a href="/projects" class="self-end underline underline-offset-4">All projects →</a>
+	</section>
+
+	<section class="panel my-24 flex flex-col gap-6 p-8 md:p-12">
+		<h2 class="text-4xl leading-none font-bold md:text-5xl">Skills</h2>
+		<dl class="grid gap-x-8 gap-y-3 md:grid-cols-[max-content_1fr]">
 			{
-				skillGroups.map((group, i) => (
-					<li
-						class:list={[
-							"reveal-item flex flex-col gap-6 px-0 lg:px-8 lg:first:pl-0 lg:last:pr-0",
-							i !== 0 && "lg:border-l lg:border-border",
-						]}
-						style={`--reveal-i: ${i + 1}`}
-					>
-						<span class=" text-sm tracking-wider text-muted uppercase">
-							{group.category}
-						</span>
-						<ul class="flex flex-col gap-3 text-2xl leading-none tracking-wide md:text-3xl lg:gap-4">
-							{group.items.map((item) => (
-								<li>{item}</li>
-							))}
-						</ul>
-					</li>
+				skillGroups.map((group) => (
+					<>
+						<dt class="text-sm text-muted">{group.category}</dt>
+						<dd>{group.items.join(" · ")}</dd>
+					</>
 				))
 			}
-		</ul>
-	</div>
-	<div
-		class="reveal flex w-full flex-col items-start justify-start gap-8 border-border py-20 md:gap-12 md:py-28 lg:gap-16 lg:py-36"
-	>
-		<h2
-			class="reveal-item text-4xl leading-none tracking-wide md:text-5xl lg:text-6xl"
-			style="--reveal-i: 0"
-		>
-			Top Projects
-		</h2>
-		<div class="flex w-full flex-col">
-			{topProjects.map((project, i) => <Project project={project} index={i + 1} />)}
-		</div>
-	</div>
-	<div
-		class="reveal flex w-full flex-col items-start justify-start gap-8 border-border py-20 md:gap-12 md:py-28 lg:gap-16 lg:py-36"
-	>
-		{
-			bigContacts.map((contact, i) => (
-				<a
-					href={contact.link}
-					class="reveal-item group flex w-full items-center justify-between border-border pb-4 lg:pb-8"
-					style={`--reveal-i: ${i}`}
-				>
-					<span class=" text-4xl leading-none tracking-wide transition-transform group-hover:translate-x-1 md:text-5xl lg:text-7xl">
-						{contact.name}
-					</span>
-					<ArrowSvg class="h-8 w-12 shrink-0 fill-current transition-transform group-hover:translate-x-1" />
-				</a>
-			))
-		}
-		<ul class="grid w-full grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-y-6 lg:grid-cols-4 lg:gap-y-0">
+		</dl>
+	</section>
+
+	<section data-anchor="turn" class="panel my-24 flex flex-col gap-6 p-8 md:p-12">
+		<h2 class="text-4xl leading-none font-bold md:text-5xl">Contact</h2>
+		<ul class="grid gap-4 sm:grid-cols-2">
 			{
-				smallContacts.map((contact, i) => (
-					<li
-						class:list={[
-							"reveal-item flex flex-col gap-3 border-0 px-0 sm:border-l sm:border-border sm:px-8 sm:last:pr-0 sm:odd:border-l-0 sm:odd:pl-0 lg:first:border-l-0 lg:first:pl-0 lg:odd:border-l lg:odd:pl-8",
-						]}
-						style={`--reveal-i: ${bigContacts.length + i}`}
-					>
-						<span class=" text-sm tracking-wider text-muted uppercase">
-							{contact.label}
-						</span>
-						<a href={contact.link} class=" text-3xl leading-none tracking-wide">
+				contacts.map((contact) => (
+					<li class="flex flex-col gap-1">
+						<span class="text-sm text-muted">{contact.label}</span>
+						<a href={contact.link} class="text-xl underline-offset-4 hover:underline">
 							{contact.name}
 						</a>
 					</li>
 				))
 			}
 		</ul>
-	</div>
+		{showPosts && <a href="/posts" class="underline underline-offset-4">Posts →</a>}
+	</section>
 </Layout>
-
-<script>
-	function setupReveal() {
-		const els = document.querySelectorAll<HTMLElement>(".reveal");
-		if (!els.length) return;
-
-		const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-		if (reduce || !("IntersectionObserver" in window)) {
-			for (const el of els) el.classList.add("in-view");
-			return;
-		}
-
-		const io = new IntersectionObserver(
-			(entries) => {
-				for (const entry of entries) {
-					if (entry.isIntersecting) {
-						entry.target.classList.add("in-view");
-						io.unobserve(entry.target);
-					}
-				}
-			},
-			{ rootMargin: "0px 0px -10% 0px", threshold: 0.15 },
-		);
-
-		for (const el of els) io.observe(el);
-	}
-
-	setupReveal();
-</script>
