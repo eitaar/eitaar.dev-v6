@@ -1,0 +1,21 @@
+---
+import "../styles/global.css";
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1" />
+		<meta name="robots" content="noindex" />
+		<title>Poolrooms lab</title>
+	</head>
+	<body class="m-0 overflow-hidden bg-black">
+		<canvas id="lab" class="block h-[100dvh] w-screen"></canvas>
+		<script>
+			import { startLab } from "../lib/scene/lab";
+
+			const canvas = document.getElementById("lab");
+			if (canvas instanceof HTMLCanvasElement) startLab(canvas);
+		</script>
+	</body>
+</html>
