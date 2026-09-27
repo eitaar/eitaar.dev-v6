@@ -29,13 +29,13 @@ _Avoid_: Tech, stack item
 ### Scene
 
 **Poolrooms**:
-The bright, empty tiled pool space the homepage background moves through; the site's light world.
+The flooded, fully tiled, vaulted passages the homepage background moves through, lit by daylight from above.
 _Avoid_: Pool, backrooms, 3D background
 
-**Alley**:
-The dark passage the path turns into after Poolrooms, where the page ends; the entrance to the site's dark world.
-_Avoid_: Corridor, exit, dark mode scene
+**Depths**:
+The far part of Poolrooms where the light fails; the page ends there, growing as dark as it can, with the far doorway always out of reach.
+_Avoid_: Alley, end, exit, dark mode
 
 **Anchor**:
-A fixed point on the camera's path that lines up with a homepage section (entrance, pool centre, turn into the Alley).
+A fixed point on the camera's path that lines up with a homepage section (entrance, pool, depths).
 _Avoid_: Waypoint, keyframe, stop
