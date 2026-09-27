@@ -127,20 +127,20 @@
 	background-color: color-mix(in oklab, var(--bg) 88%, transparent);
 }
 
-/* ─── Zones: Poolrooms vs Alley colours, switched once, never per frame ─── */
+/* ─── Zones: Poolrooms vs Depths colours, switched once, never per frame ─── */
 :root {
 	--text-now: var(--content);
 	--surface-now: var(--bg);
 }
 
-:root[data-zone="alley"] {
-	--text-now: var(--content-alley);
-	--surface-now: var(--bg-alley);
+:root[data-zone="depths"] {
+	--text-now: var(--content-depths);
+	--surface-now: var(--bg-depths);
 	--muted: #a4a7ab;
 	--border: #3a3d41;
 }
 
-/* Safety net under the background layers: never white behind Alley text. */
+/* Safety net under the background layers: never white behind Depths text. */
 html {
 	background-color: var(--surface-now);
 }
@@ -181,13 +181,13 @@ body {
 	background-size: 48px 48px;
 }
 
-.scene-bg__alley {
-	background-color: var(--bg-alley);
+.scene-bg__depths {
+	background-color: var(--bg-depths);
 	opacity: 0;
 }
 
 [data-scene="scene"] .scene-bg__static,
-[data-scene="scene"] .scene-bg__alley {
+[data-scene="scene"] .scene-bg__depths {
 	display: none;
 }
 

@@ -1,9 +1,11 @@
-export type AnchorName = "entrance" | "pool" | "turn";
+import anchors from "./anchors.json";
+
+export type AnchorName = "entrance" | "pool" | "depths";
 
 export const ANCHOR_U: Record<AnchorName, number> = {
 	entrance: 0,
-	pool: 0.3,
-	turn: 0.72,
+	pool: anchors.pool,
+	depths: anchors.depths,
 };
 
 export function isAnchorName(value: string | undefined): value is AnchorName {
@@ -17,24 +19,24 @@ export interface ScrollAnchor {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-/** Scroll offset at which an Anchor's section fires: pool at mid-viewport, turn as it enters. */
+/** Scroll offset at which an Anchor's section fires: pool at mid-viewport, depths as it enters. */
 export function anchorTop(name: AnchorName, elementTop: number, viewportHeight: number): number {
-	return name === "turn" ? elementTop - viewportHeight : elementTop - viewportHeight * 0.5;
+	return name === "depths" ? elementTop - viewportHeight : elementTop - viewportHeight * 0.5;
 }
 
 /**
- * `minAlleyScroll` reserves scroll distance after the turn so the walk into the Alley
+ * `minDepthsScroll` reserves scroll distance after the depths Anchor so the walk into the Depths
  * is never squeezed into the last few pixels of the page.
  */
 export function buildScrollAnchors(
 	sections: { name: AnchorName; top: number }[],
 	maxScroll: number,
-	minAlleyScroll = 0,
+	minDepthsScroll = 0,
 ): ScrollAnchor[] {
 	const points: ScrollAnchor[] = [{ scroll: 0, u: 0 }];
 	for (const section of sections) {
 		if (section.name === "entrance") continue;
-		const limit = section.name === "turn" ? Math.max(0, maxScroll - minAlleyScroll) : maxScroll;
+		const limit = section.name === "depths" ? Math.max(0, maxScroll - minDepthsScroll) : maxScroll;
 		points.push({ scroll: clamp(section.top, 0, limit), u: ANCHOR_U[section.name] });
 	}
 	points.push({ scroll: maxScroll, u: 1 });
@@ -62,22 +64,29 @@ export function scrollToU(scroll: number, anchors: ScrollAnchor[]): number {
 	return anchors[anchors.length - 1].u;
 }
 
-export const ALLEY_START = 0.72;
-export const ALLEY_END = 0.9;
+export const DEPTHS_START = ANCHOR_U.depths;
+export const DEPTHS_END = 1;
 
-export function alleyFactor(u: number): number {
-	const x = clamp((u - ALLEY_START) / (ALLEY_END - ALLEY_START), 0, 1);
+export function depthsFactor(u: number): number {
+	const x = clamp((u - DEPTHS_START) / (DEPTHS_END - DEPTHS_START), 0, 1);
 	return x * x * (3 - 2 * x);
 }
 
-export type Zone = "pool" | "alley";
+const DEPTHS_MIN_EXPOSURE = 0.12;
+
+/** Tone-mapping exposure for the Depths: dims as far as it can without going black. */
+export function depthsExposure(factor: number): number {
+	return 1 - (1 - DEPTHS_MIN_EXPOSURE) * clamp(factor, 0, 1);
+}
+
+export type Zone = "pool" | "depths";
 
 const ZONE_ENTER = 0.55;
 const ZONE_LEAVE = 0.45;
 
 export function nextZone(current: Zone, factor: number): Zone {
-	if (current === "pool" && factor >= ZONE_ENTER) return "alley";
-	if (current === "alley" && factor <= ZONE_LEAVE) return "pool";
+	if (current === "pool" && factor >= ZONE_ENTER) return "depths";
+	if (current === "depths" && factor <= ZONE_LEAVE) return "pool";
 	return current;
 }
 
@@ -95,7 +104,7 @@ export function damp(current: number, target: number, lambda: number, dt: number
 	return target + (current - target) * Math.exp(-lambda * dt);
 }
 
-/** Camera path: down the Poolrooms hall (−z), then a turn into the Alley (+x). */
+/** Camera path: down the Poolrooms hall (−z), then a turn into the Depths (+x). */
 export const PATH_POINTS: readonly [number, number, number][] = [
 	[0, 1.6, 0],
 	[0, 1.6, -20],

@@ -16,7 +16,7 @@ export function trackScrollU(onU: (u: number) => void): () => void {
 			const top = anchorTop(name, el.getBoundingClientRect().top + scrollY, window.innerHeight);
 			return [{ name, top }];
 		});
-		// Reserve half a viewport of scroll for the walk into the Alley.
+		// Reserve half a viewport of scroll for the walk into the Depths.
 		anchors = buildScrollAnchors(
 			sections,
 			ScrollTrigger.maxScroll(window),

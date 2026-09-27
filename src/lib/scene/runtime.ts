@@ -1,6 +1,6 @@
 import { gsap } from "gsap";
 import * as THREE from "three";
-import { alleyFactor, damp, PATH_POINTS, pointerLook } from "./path";
+import { damp, depthsFactor, PATH_POINTS, pointerLook } from "./path";
 import { createPoolrooms } from "./poolrooms";
 
 export interface SceneHandle {
@@ -59,7 +59,7 @@ export function mountScene(
 		camera.rotateY(look.yaw);
 		camera.rotateX(look.pitch);
 
-		world.setAlley(alleyFactor(u));
+		world.setDepths(depthsFactor(u));
 		world.update(time);
 		renderer.render(world.scene, camera);
 	};

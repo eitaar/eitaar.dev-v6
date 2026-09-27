@@ -1,6 +1,6 @@
 <div class="scene-bg" aria-hidden="true">
 	<div class="scene-bg__static"></div>
-	<div class="scene-bg__alley"></div>
+	<div class="scene-bg__depths"></div>
 	<canvas class="scene-bg__canvas" hidden></canvas>
 </div>
 
@@ -8,19 +8,19 @@
 	import { gsap } from "gsap";
 	import { createUBridge, startBackground } from "../lib/scene/background";
 	import { readEnvironment } from "../lib/scene/capability";
-	import { alleyFactor, nextZone, type Zone } from "../lib/scene/path";
+	import { depthsFactor, nextZone, type Zone } from "../lib/scene/path";
 	import { trackScrollU } from "../lib/scene/scroll";
 
 	const root = document.documentElement;
 	const canvas = document.querySelector<HTMLCanvasElement>(".scene-bg__canvas");
-	const alley = document.querySelector<HTMLElement>(".scene-bg__alley");
-	const setAlleyOpacity = alley ? gsap.quickSetter(alley, "opacity") : () => {};
+	const depths = document.querySelector<HTMLElement>(".scene-bg__depths");
+	const setDepthsOpacity = depths ? gsap.quickSetter(depths, "opacity") : () => {};
 	const bridge = createUBridge();
 	let zone: Zone = "pool";
 
 	trackScrollU((u) => {
-		const factor = alleyFactor(u);
-		setAlleyOpacity(factor);
+		const factor = depthsFactor(u);
+		setDepthsOpacity(factor);
 		const next = nextZone(zone, factor);
 		if (next !== zone) {
 			zone = next;
