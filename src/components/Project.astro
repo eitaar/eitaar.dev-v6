@@ -1,0 +1,47 @@
+---
+import type { CollectionEntry } from "astro:content";
+import ArrowSvg from "../assets/svg/arrow.svg";
+
+interface Props {
+	project: CollectionEntry<"projects">;
+	index?: number;
+}
+
+const { project, index = 0 } = Astro.props;
+const { title, summary, techStack, pubDate } = project.data;
+const year = pubDate.getFullYear();
+const href = `/projects/${project.id}`;
+---
+
+<a
+	href={href}
+	class="reveal-item group flex flex-col items-start gap-3 border-b border-border py-6 last:border-0 lg:flex-row lg:items-center lg:gap-8 lg:py-8"
+	style={`--reveal-i: ${index}`}
+>
+	<span class=" text-xs tracking-wider text-muted lg:w-20 lg:shrink-0 lg:text-sm"
+		>{year}</span
+	>
+	<div class="min-w-0 flex-1">
+		<h3
+			class="mb-2 text-3xl leading-none font-bold tracking-tight transition-transform group-hover:translate-x-1 lg:text-4xl"
+		>
+			{title}
+		</h3>
+		<ul
+			class="flex flex-wrap items-center gap-x-2 text-xs tracking-widest text-muted uppercase"
+		>
+			{
+				techStack.map((item, i) => (
+					<>
+						{i > 0 && <span aria-hidden="true">·</span>}
+						<li>{item}</li>
+					</>
+				))
+			}
+		</ul>
+	</div>
+	<p class="text-sm leading-relaxed text-muted lg:w-80 lg:shrink-0 lg:text-base">{summary}</p>
+	<ArrowSvg
+		class="hidden h-8 w-12 shrink-0 fill-current transition-transform group-hover:translate-x-1 lg:block"
+	/>
+</a>

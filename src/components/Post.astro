@@ -1,0 +1,54 @@
+---
+import type { CollectionEntry } from "astro:content";
+import ArrowSvg from "../assets/svg/arrow.svg";
+
+interface Props {
+	post: CollectionEntry<"posts">;
+	index?: number;
+}
+
+const { post, index = 0 } = Astro.props;
+const { title, description, pubDate, tags } = post.data;
+const date = pubDate.toLocaleDateString("en-GB", {
+	year: "numeric",
+	month: "short",
+	day: "2-digit",
+	timeZone: "UTC",
+});
+---
+
+<a
+	href={`/posts/${post.id}`}
+	class="reveal-item group flex flex-col gap-3 border-b border-border py-6 last:border-0 lg:grid lg:grid-cols-[8rem_minmax(0,1fr)_20rem_3rem] lg:items-center lg:gap-8 lg:py-8"
+	style={`--reveal-i: ${index}`}
+>
+	<time
+		datetime={pubDate.toISOString()}
+		class=" text-xs tracking-wider text-muted lg:text-sm"
+	>
+		{date}
+	</time>
+	<div class="min-w-0">
+		<h2
+			class="mb-2 text-3xl leading-tight font-bold tracking-tight transition-transform group-hover:translate-x-1 lg:text-4xl"
+		>
+			{title}
+		</h2>
+		{
+			tags.length > 0 && (
+				<ul class="flex flex-wrap items-center gap-x-2 text-xs tracking-widest text-muted uppercase">
+					{tags.map((tag, i) => (
+						<>
+							{i > 0 && <span aria-hidden="true">·</span>}
+							<li>{tag}</li>
+						</>
+					))}
+				</ul>
+			)
+		}
+	</div>
+	<p class="text-sm leading-relaxed text-muted lg:text-base">{description}</p>
+	<ArrowSvg
+		class="hidden h-8 w-12 shrink-0 fill-current transition-transform group-hover:translate-x-1 lg:block"
+	/>
+</a>

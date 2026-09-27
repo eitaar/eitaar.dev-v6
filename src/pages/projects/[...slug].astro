@@ -1,0 +1,85 @@
+---
+import { Image } from "astro:assets";
+import { getCollection, render } from "astro:content";
+import Layout from "../../layouts/Layout.astro";
+
+export async function getStaticPaths() {
+	const projects = await getCollection("projects");
+	return projects.map((project) => ({
+		params: { slug: project.id },
+		props: project,
+	}));
+}
+
+const project = Astro.props;
+const { title, summary, techStack, repoUrl, demoUrl, pubDate, heroImage } = project.data;
+const { Content } = await render(project);
+const formattedDate = pubDate.toLocaleDateString("en-US", {
+	year: "numeric",
+	month: "2-digit",
+	day: "2-digit",
+});
+
+const meta = [
+	demoUrl && { label: "Website", value: demoUrl, url: demoUrl },
+	repoUrl && { label: "Repository", value: new URL(repoUrl).pathname.slice(1), url: repoUrl },
+	{ label: "Category", value: project.data.category },
+	{ label: "Last Updated", value: formattedDate },
+	{ label: "Tech Stack", value: techStack.join(", ") },
+].filter(Boolean) as { label: string; value: string; url?: string }[];
+---
+
+<Layout title={title} description={summary}>
+	<div class="flex flex-col items-center pt-32">
+		<h1 class="pb-8 text-4xl leading-none font-bold tracking-wide md:text-5xl">
+			{title}
+		</h1>
+
+		{
+			heroImage && (
+				<Image
+					src={heroImage}
+					alt={title}
+					class="max-h-96 w-auto rounded-lg border border-border object-contain"
+					format="avif"
+					quality="mid"
+					fetchpriority={"high"}
+					loading={"eager"}
+				/>
+			)
+		}
+
+		<h2 class="pt-12 pb-4 text-3xl leading-none tracking-tight md:text-4xl">
+			Overview
+		</h2>
+		<hr class="w-7/10 border-border" />
+
+		<dl class="w-7/10 pt-4">
+			{
+				meta.map((item) => (
+					<div class="flex items-baseline justify-between py-1.5">
+						<dt class=" text-lg font-bold tracking-wide md:text-xl">{item.label}</dt>
+						<dd class="text-right text-lg tracking-wider md:text-xl">
+							{item.url ? (
+								<a
+									href={item.url}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="underline underline-offset-2 hover:text-muted"
+								>
+									{item.value}
+								</a>
+							) : (
+								item.value
+							)}
+						</dd>
+					</div>
+				))
+			}
+		</dl>
+
+		<!-- <div class="w-full pt-8 text-base text-pretty md:text-lg [&>*+*]:mt-6">
+			<Content />
+		</div> -->
+	</div>
+</Layout>

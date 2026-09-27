@@ -1,0 +1,23 @@
+---
+const NAV_LINKS = [
+	{ text: "Projects", url: "/projects" },
+	{ text: "Posts", url: "/posts" },
+];
+---
+
+<header
+	class="fixed top-0 right-0 left-0 z-50 flex h-20 items-center justify-between px-6 py-4"
+>
+	<a class="text-lg font-bold" href="/">eitaar</a>
+	<nav>
+		<ul class="flex gap-4 text-lg text-muted">
+			{
+				NAV_LINKS.map((link) => (
+					<li>
+						<a href={link.url}>{link.text}</a>
+					</li>
+				))
+			}
+		</ul>
+	</nav>
+</header>

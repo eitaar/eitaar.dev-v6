@@ -1,0 +1,7 @@
+[data-theme="light"] {
+	color-scheme: light;
+	--bg: #ffffff;
+	--content: #1a1a1c;
+	--muted: #626264;
+	--border: #d8d8d8;
+}

@@ -1,0 +1,41 @@
+---
+import { Image } from "astro:assets";
+import NotFoundImage from "../assets/img/404.png";
+import Layout from "../layouts/Layout.astro";
+import "../styles/global.css";
+---
+
+<Layout
+	title="404 Not Found"
+	description="The page you are looking for does not exist."
+	showHeader={false}
+	showFooter={false}
+>
+	<div class="flex min-h-screen w-full flex-col items-center justify-center gap-6 p-8">
+		<Image
+			src={NotFoundImage}
+			alt="404 Not Found"
+			width={600}
+			loading="eager"
+			fetchpriority="high"
+			format="avif"
+		/>
+		<p class="text-center text-lg text-pretty text-muted">
+			The page you are looking for does not seem to exist.
+		</p>
+		<a href="/" class="text-center text-lg text-pretty text-muted underline hover:text-content">
+			Go back to the Top page
+		</a>
+	</div>
+	<p class="absolute! right-4 bottom-4 z-30 text-xs text-muted md:text-sm">
+		KawaiiLogos by
+		<a
+			href="https://github.com/SAWARATSUKI/KawaiiLogos"
+			target="_blank"
+			rel="noopener noreferrer"
+			class="underline hover:text-content"
+		>
+			SAWARATSUKI
+		</a>
+	</p>
+</Layout>
