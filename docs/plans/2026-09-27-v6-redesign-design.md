@@ -44,7 +44,7 @@ Derived from Poolrooms: tile grout as grid/rules, white / pool-aqua / muted tone
 - **Models (Blender):** Poolrooms architecture, the Alley entrance (mostly unseen darkness), one symbolic object.
 - **Shaders:** water, fog, fluorescent flicker, film grain.
 - **Budget:** light enough for desktop integrated GPUs (low poly, baked lighting over real-time reflections, small textures).
-- **Stack:** plain Three.js, no GSAP (see ADR 0001).
+- **Stack:** plain Three.js + GSAP ScrollTrigger and ticker (see ADR 0001).
 
 ## Fallbacks
 
@@ -55,6 +55,25 @@ When the viewport is small, the pointer is coarse, WebGL is unavailable, or `pre
 - Copy v5 (Astro 7, Tailwind v4, content collections, Cloudflare Workers) as the base; replace styles, layout and homepage.
 - Develop as a separate Worker on a `*.workers.dev` preview; switch eitaar.dev over when the MVP is done; retire v5.
 - Writeups and Posts do not block launch.
+
+## Design Direction (from design-taste-frontend / frontend-design)
+
+**Design Read:** developer portfolio for fellow developers, with a liminal-space, artistic-3D language, leaning toward native CSS + Tailwind v4, a Three.js background and GSAP ScrollTrigger.
+
+**Dials:** `DESIGN_VARIANCE 7` · `MOTION_INTENSITY 6` · `VISUAL_DENSITY 3` (portfolio-developer preset pushed toward artistic; airy, like an empty building).
+
+**Signature:** the walk from Poolrooms into the Alley. Spend boldness there only; everything around it stays quiet and disciplined.
+
+**Constraints for Plan B (visual system):**
+- Type: no Inter, Fraunces or Instrument Serif; no serif by default. Candidates stay as listed under Open Questions, compared side by side.
+- Colour: one accent (pool aqua), locked across the page; off-white / off-black, no pure `#fff` / `#000`. The Alley darkening is the one deliberate theme shift on the page.
+- One corner-radius scale for the whole site (tiles suggest sharp or near-sharp).
+- Copy: zero em-dashes; no scroll cues; no section-number eyebrows; at most one uppercase micro-label per three sections.
+- Icons from one library via astro-icon (replace v5's hand-rolled `arrow.svg`).
+- Motion must be motivated (hierarchy, storytelling, feedback, state change), use transform/opacity only, and share GSAP's ScrollTrigger and ticker with the scene.
+- Grain/noise only on a fixed, `pointer-events: none` layer; no large or animated `backdrop-filter` over the live canvas.
+- Text over the scene meets WCAG AA in both Poolrooms and Alley zones.
+- Dark mode is deliberately deferred (the world beyond the Alley), overriding the skill's dual-mode default.
 
 ## Open Questions
 

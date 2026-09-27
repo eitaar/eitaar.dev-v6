@@ -4,9 +4,11 @@
 
 **Goal:** Stand up v6 on v5's foundation with the new content model, a DOM homepage laid out along the Poolrooms → Alley path, and a capability-gated Three.js background (with a static fallback), deployed to a workers.dev preview.
 
-**Architecture:** Astro 7 static site (copied from v5). All readable content is DOM. The homepage mounts one fixed background: a static CSS layer by default, upgraded to a Three.js canvas only on capable desktops. Scroll position is mapped to a camera-path parameter `u ∈ [0,1]` through three **Anchors** (`entrance`, `pool`, `turn`) marked on DOM sections with `data-anchor`; the same `u` drives the Alley darkening (`--alley` CSS variable) in both modes. Pure logic lives in `src/lib/**` and is unit-tested with Vitest; Three.js code is verified in the browser.
+**Architecture:** Astro 7 static site (copied from v5). All readable content is DOM. The homepage mounts one fixed background: a static CSS layer by default, upgraded to a Three.js canvas only on capable desktops. Scroll position is mapped to a camera-path parameter `u ∈ [0,1]` through three **Anchors** (`entrance`, `pool`, `turn`) marked on DOM sections with `data-anchor`; the same `u` drives the Alley darkening in both modes. Scroll progress comes only from GSAP ScrollTrigger and every per-frame update runs on `gsap.ticker`, so later GSAP motion shares one scroll source and one frame clock with the scene. Pure logic lives in `src/lib/**` and is unit-tested with Vitest; Three.js code is verified in the browser.
 
-**Tech Stack:** Astro 7, Tailwind CSS v4 (`@tailwindcss/vite`), TypeScript strict, Three.js 0.186, Vitest 5, Biome, Cloudflare Workers (static assets).
+**Tech Stack:** Astro 7, Tailwind CSS v4 (`@tailwindcss/vite`), TypeScript strict, Three.js 0.186, GSAP 3.15 (ScrollTrigger, ticker), Vitest 5, Biome, Cloudflare Workers (static assets).
+
+**Design skills applied:** design-taste-frontend, frontend-design, fixing-motion-performance, threejs-fundamentals. Their visual rules are recorded for Plan B in the spec's "Design Direction" section; the motion/performance rules are Global Constraints below.
 
 **Spec:** [docs/plans/2026-09-27-v6-redesign-design.md](../../plans/2026-09-27-v6-redesign-design.md) — also read [CONTEXT.md](../../../CONTEXT.md) (vocabulary) and [ADR 0001](../../adr/0001-webgl-background-dom-content.md).
 
@@ -22,7 +24,11 @@
 - No dark mode, no theme toggle, no sound, no text drawn inside the 3D scene (all deferred / out of scope).
 - Every readable thing is DOM; the canvas and static layers are `aria-hidden="true"`.
 - No 3D canvas when **any** of: viewport width `< 1024px`, `(pointer: coarse)`, no WebGL2, `(prefers-reduced-motion: reduce)`.
-- No GSAP (ADR 0001).
+- Scroll progress comes **only** from GSAP ScrollTrigger; per-frame work runs **only** on `gsap.ticker`. No `window.addEventListener("scroll")`, no hand-rolled `requestAnimationFrame` loops (ADR 0001, fixing-motion-performance).
+- Scroll-linked visuals touch only `transform` / `opacity` on single elements. Colour changes between Poolrooms and the Alley are a one-shot transition on a zone switch (`<html data-zone="pool|alley">`), never a per-frame CSS variable update.
+- No `backdrop-filter` over the live canvas.
+- Hero uses `min-h-[100dvh]`, never `h-screen` / `min-h-screen`.
+- Zero em-dashes in visible copy; no scroll cues; no uppercase-tracking micro-labels in this plan's markup.
 - Vocabulary from `CONTEXT.md`: frontmatter field is `featured` (never `topProject`); scene names are Poolrooms, Alley, Anchor.
 - Featured Projects are exactly: `yot`, `eitaar-dev`, `wahoot`.
 - Posts link appears only when at least one Post exists.
@@ -50,11 +56,11 @@
 | `src/content/projects/*.md` | Project entries (yot merged, `eitaar-dev` replaces `portfolio`) |
 | `src/lib/content.ts` (+ `.test.ts`) | pure helpers: sort, featured filter, posts visibility, project links |
 | `src/lib/scene/capability.ts` (+ `.test.ts`) | should this device get the 3D scene? |
-| `src/lib/scene/path.ts` (+ `.test.ts`) | Anchors, scroll→`u`, Alley factor, pointer look, damping, path points |
-| `src/lib/scene/scroll.ts` | browser: measure `[data-anchor]` sections, emit `u` on scroll/resize |
+| `src/lib/scene/path.ts` (+ `.test.ts`) | Anchors, scroll→`u`, Alley factor, zone hysteresis, pointer look, damping, path points |
+| `src/lib/scene/scroll.ts` | browser: one ScrollTrigger; measure `[data-anchor]` sections on refresh, emit `u` on update |
 | `src/lib/scene/background.ts` (+ `.test.ts`) | orchestration: choose mode, mount scene, fall back; `u` bridge |
 | `src/lib/scene/poolrooms.ts` | Three.js world (placeholder geometry; replaced in Plan C) |
-| `src/lib/scene/runtime.ts` | Three.js renderer, camera on path, loop, resize, visibility, dispose |
+| `src/lib/scene/runtime.ts` | Three.js renderer, camera on path, `gsap.ticker` loop, resize, dispose |
 | `src/components/SceneBackground.astro` | fixed background layers + client wiring |
 | `src/components/Header.astro`, `Footer.astro`, `BaseHead.astro`, `Project.astro` | shell components |
 | `src/layouts/Layout.astro` | base shell; `scene` prop mounts the background |
@@ -85,14 +91,14 @@ ls -a
 ```
 Expected: the listed files plus the existing `CONTEXT.md`, `docs/`, `.git/`.
 
-- [ ] **Step 2: Rename the package, drop GSAP, add a test script**
+- [ ] **Step 2: Rename the package and add a test script**
 
-In `package.json`: set `"name": "eitaar-dev-v6"`; remove the `"gsap"` dependency line; add `"test": "vitest run"` to `scripts`. Then:
+In `package.json`: set `"name": "eitaar-dev-v6"`; add `"test": "vitest run"` to `scripts`. Keep the existing `"gsap"` dependency (v5 installed it but never imported it; v6 uses it from Task 6). Then:
 
 ```bash
-npm uninstall gsap && npm install
+npm install
 ```
-Expected: install succeeds, `gsap` absent from `package.json`.
+Expected: install succeeds; `gsap` still listed in `package.json`.
 
 - [ ] **Step 3: Rename the Worker**
 
@@ -215,12 +221,14 @@ npm run format       # prettier + biome
 
 ## Architecture
 
-Astro 7 · Tailwind v4 (`@tailwindcss/vite`) · TypeScript strict · Three.js. Deployed as static assets on Cloudflare Workers (`wrangler.jsonc`).
+Astro 7 · Tailwind v4 (`@tailwindcss/vite`) · TypeScript strict · Three.js · GSAP (ScrollTrigger + ticker). Deployed as static assets on Cloudflare Workers (`wrangler.jsonc`).
 
 - Pure, unit-tested logic: `src/lib/content.ts`, `src/lib/scene/{capability,path,background}.ts`.
 - Browser-only scene code: `src/lib/scene/{scroll,runtime,poolrooms}.ts`, wired in `src/components/SceneBackground.astro`.
 - Homepage sections mark Anchors with `data-anchor="entrance|pool|turn"`.
-- No 3D on width < 1024px, coarse pointer, no WebGL2, or reduced motion — static background instead.
+- No 3D on width < 1024px, coarse pointer, no WebGL2, or reduced motion: static background instead.
+- Scroll progress only via GSAP ScrollTrigger, per-frame work only on `gsap.ticker`. No scroll event listeners, no own rAF loops.
+- Poolrooms/Alley colour change is a zone switch (`<html data-zone>`), not a per-frame CSS variable.
 ```
 
 - [ ] **Step 8: Verify the build**
@@ -235,7 +243,7 @@ Expected: `0 errors`; build completes. (The homepage still references `bottle.sv
 ```bash
 npx biome check --write astro.config.mjs src package.json wrangler.jsonc
 git add -A
-git commit -m "chore: scaffold v6 from v5 without fonts, theme toggle or GSAP
+git commit -m "chore: scaffold v6 from v5 without v5 fonts or theme toggle
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -558,7 +566,7 @@ const showPosts = hasPosts(await getCollection("posts"));
 ---
 
 <Layout title="eitaar" description="eitaar's portfolio">
-	<section data-anchor="entrance" class="flex min-h-screen flex-col justify-center gap-4">
+	<section data-anchor="entrance" class="flex min-h-[100dvh] flex-col justify-center gap-4">
 		<h1 class="text-7xl leading-none font-bold tracking-tight md:text-8xl lg:text-9xl">eitaar</h1>
 		<p class="text-base tracking-wide text-muted md:text-lg lg:text-xl">
 			Software Developer / Student
@@ -591,7 +599,7 @@ const showPosts = hasPosts(await getCollection("posts"));
 			{
 				skillGroups.map((group) => (
 					<>
-						<dt class="text-sm tracking-wider text-muted uppercase">{group.category}</dt>
+						<dt class="text-sm text-muted">{group.category}</dt>
 						<dd>{group.items.join(" · ")}</dd>
 					</>
 				))
@@ -605,7 +613,7 @@ const showPosts = hasPosts(await getCollection("posts"));
 			{
 				contacts.map((contact) => (
 					<li class="flex flex-col gap-1">
-						<span class="text-sm tracking-wider text-muted uppercase">{contact.label}</span>
+						<span class="text-sm text-muted">{contact.label}</span>
 						<a href={contact.link} class="text-xl underline-offset-4 hover:underline">
 							{contact.name}
 						</a>
@@ -631,10 +639,10 @@ Expected: no matches except the `--animate-motionspin` / `@keyframes motionspin`
 Append to `src/styles/global.css`:
 ```css
 /* ─── Panels: content surfaces over the background ─── */
+/* No backdrop-filter: the canvas behind re-renders every frame (ADR 0001). */
 .panel {
 	border: 1px solid var(--border);
-	background-color: color-mix(in oklab, var(--bg) 78%, transparent);
-	backdrop-filter: blur(12px);
+	background-color: color-mix(in oklab, var(--bg) 88%, transparent);
 }
 ```
 
@@ -645,6 +653,11 @@ npx astro check && npm run build
 grep -o 'data-anchor="[a-z]*"' dist/index.html
 ```
 Expected: `0 errors`; grep prints `entrance`, `pool`, `turn` in that order.
+
+```bash
+grep -c "—" src/pages/index.astro; grep -c "uppercase" src/pages/index.astro
+```
+Expected: `0` and `0`.
 
 - [ ] **Step 5: Commit**
 
@@ -782,6 +795,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `scrollToU(scroll: number, anchors: ScrollAnchor[]): number`
   - `const ALLEY_START = 0.72`, `const ALLEY_END = 0.9`
   - `alleyFactor(u: number): number` — smoothstep 0→1 over `[ALLEY_START, ALLEY_END]`
+  - `type Zone = "pool" | "alley"`, `nextZone(current: Zone, factor: number): Zone` — enters the Alley at `factor >= 0.55`, leaves at `factor <= 0.45`
   - `pointerLook(nx: number, ny: number): { yaw: number; pitch: number }` — inputs clamped to `[-1,1]`; `MAX_YAW = 0.12`, `MAX_PITCH = 0.06` (radians)
   - `damp(current: number, target: number, lambda: number, dt: number): number`
   - `const PATH_POINTS: readonly [number, number, number][]` — camera path (Poolrooms runs along −z, turns into the Alley along +x)
@@ -799,6 +813,7 @@ import {
 	buildScrollAnchors,
 	damp,
 	isAnchorName,
+	nextZone,
 	pointerLook,
 	scrollToU,
 } from "./path";
@@ -904,6 +919,20 @@ describe("alleyFactor", () => {
 	});
 });
 
+describe("nextZone", () => {
+	it("enters the Alley once the factor passes the upper threshold", () => {
+		expect(nextZone("pool", 0.54)).toBe("pool");
+		expect(nextZone("pool", 0.55)).toBe("alley");
+	});
+	it("hysteresis: hovering around 0.5 does not flicker", () => {
+		expect(nextZone("alley", 0.5)).toBe("alley");
+		expect(nextZone("pool", 0.5)).toBe("pool");
+	});
+	it("returns to Poolrooms below the lower threshold", () => {
+		expect(nextZone("alley", 0.45)).toBe("pool");
+	});
+});
+
 describe("pointerLook", () => {
 	it("is neutral at the centre", () => {
 		expect(pointerLook(0, 0)).toEqual({ yaw: 0, pitch: 0 });
@@ -1000,6 +1029,17 @@ export function alleyFactor(u: number): number {
 	return x * x * (3 - 2 * x);
 }
 
+export type Zone = "pool" | "alley";
+
+const ZONE_ENTER = 0.55;
+const ZONE_LEAVE = 0.45;
+
+export function nextZone(current: Zone, factor: number): Zone {
+	if (current === "pool" && factor >= ZONE_ENTER) return "alley";
+	if (current === "alley" && factor <= ZONE_LEAVE) return "pool";
+	return current;
+}
+
 const MAX_YAW = 0.12;
 const MAX_PITCH = 0.06;
 
@@ -1043,54 +1083,63 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 6: Static background with scroll-driven Alley darkening
+### Task 6: Static background with scroll-driven Alley darkening (GSAP ScrollTrigger)
 
 **Files:**
 - Create: `src/lib/scene/scroll.ts`, `src/components/SceneBackground.astro`
 - Modify: `src/layouts/Layout.astro`, `src/pages/index.astro`, `src/styles/global.css`, `src/styles/light.css`
 
 **Interfaces:**
-- Consumes: `isAnchorName`, `buildScrollAnchors`, `scrollToU`, `alleyFactor` (Task 5).
+- Consumes: `isAnchorName`, `buildScrollAnchors`, `scrollToU`, `alleyFactor`, `nextZone`, `Zone` (Task 5); `gsap` (already a dependency).
 - Produces:
-  - `trackScrollU(onU: (u: number) => void, win?: Window): () => void` — measures `[data-anchor]` sections (top minus half a viewport), re-measures on body resize, calls `onU` immediately and on every scroll; returns a disposer.
+  - `trackScrollU(onU: (u: number) => void): () => void` — one ScrollTrigger over the whole page; on every refresh (load, resize) measures `[data-anchor]` sections (top minus half a viewport) and emits; on every update emits `scrollToU(self.scroll(), anchors)`; returns a disposer that kills the trigger.
   - `SceneBackground.astro` markup: `.scene-bg` > `.scene-bg__static`, `.scene-bg__alley`, `canvas.scene-bg__canvas[hidden]`.
   - `Layout` prop `scene?: boolean` (default `false`).
-  - CSS custom property `--alley` on `<html>` (0–1), token `--content-alley`.
+  - `<html data-zone="pool|alley">`; tokens `--content-alley`, `--bg-alley`, `--text-now`, `--surface-now`.
 
 - [ ] **Step 1: Implement `src/lib/scene/scroll.ts`**
 
 ```ts
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { buildScrollAnchors, isAnchorName, type ScrollAnchor, scrollToU } from "./path";
 
-export function trackScrollU(onU: (u: number) => void, win: Window = window): () => void {
-	const doc = win.document;
+gsap.registerPlugin(ScrollTrigger);
+
+/** One ScrollTrigger for the whole page. Layout is read only on refresh (load/resize). */
+export function trackScrollU(onU: (u: number) => void): () => void {
 	let anchors: ScrollAnchor[] = [];
 
-	const update = () => onU(scrollToU(win.scrollY, anchors));
-
 	const measure = () => {
-		const maxScroll = Math.max(0, doc.documentElement.scrollHeight - win.innerHeight);
-		const sections = [...doc.querySelectorAll<HTMLElement>("[data-anchor]")].flatMap((el) => {
-			const name = el.dataset.anchor;
-			if (!isAnchorName(name)) return [];
-			const top = el.getBoundingClientRect().top + win.scrollY - win.innerHeight * 0.5;
-			return [{ name, top }];
-		});
-		anchors = buildScrollAnchors(sections, maxScroll);
-		update();
+		const scrollY = window.scrollY;
+		const sections = [...document.querySelectorAll<HTMLElement>("[data-anchor]")].flatMap(
+			(el) => {
+				const name = el.dataset.anchor;
+				if (!isAnchorName(name)) return [];
+				const top = el.getBoundingClientRect().top + scrollY - window.innerHeight * 0.5;
+				return [{ name, top }];
+			},
+		);
+		anchors = buildScrollAnchors(sections, ScrollTrigger.maxScroll(window));
 	};
 
-	const observer = new ResizeObserver(measure);
-	observer.observe(doc.body);
-	win.addEventListener("scroll", update, { passive: true });
+	const trigger = ScrollTrigger.create({
+		start: 0,
+		end: "max",
+		onUpdate: (self) => onU(scrollToU(self.scroll(), anchors)),
+		onRefresh: (self) => {
+			measure();
+			onU(scrollToU(self.scroll(), anchors));
+		},
+	});
+
 	measure();
+	onU(scrollToU(trigger.scroll(), anchors));
 
-	return () => {
-		observer.disconnect();
-		win.removeEventListener("scroll", update);
-	};
+	return () => trigger.kill();
 }
 ```
+(Reading `window.scrollY` inside `measure` is a one-off layout read during refresh, not scroll-driven animation.)
 
 - [ ] **Step 2: Create `src/components/SceneBackground.astro`**
 
@@ -1102,15 +1151,27 @@ export function trackScrollU(onU: (u: number) => void, win: Window = window): ()
 </div>
 
 <script>
-	import { alleyFactor } from "../lib/scene/path";
+	import { gsap } from "gsap";
+	import { alleyFactor, nextZone, type Zone } from "../lib/scene/path";
 	import { trackScrollU } from "../lib/scene/scroll";
 
 	const root = document.documentElement;
+	const alley = document.querySelector<HTMLElement>(".scene-bg__alley");
+	const setAlleyOpacity = alley ? gsap.quickSetter(alley, "opacity") : () => {};
+	let zone: Zone = "pool";
+
 	trackScrollU((u) => {
-		root.style.setProperty("--alley", alleyFactor(u).toFixed(3));
+		const factor = alleyFactor(u);
+		setAlleyOpacity(factor);
+		const next = nextZone(zone, factor);
+		if (next !== zone) {
+			zone = next;
+			root.dataset.zone = zone;
+		}
 	});
 </script>
 ```
+(Only one element's `opacity` changes per scroll frame; the page's colours change once per zone switch.)
 
 - [ ] **Step 3: Add the `scene` prop to Layout**
 
@@ -1128,6 +1189,29 @@ Add to `src/styles/light.css` inside `[data-theme="light"]`:
 
 Append to `src/styles/global.css`:
 ```css
+/* ─── Zones: Poolrooms vs Alley colours, switched once, never per frame ─── */
+:root {
+	--text-now: var(--content);
+	--surface-now: var(--bg);
+}
+
+:root[data-zone="alley"] {
+	--text-now: var(--content-alley);
+	--surface-now: var(--bg-alley);
+}
+
+body {
+	color: var(--text-now);
+	transition: color 0.6s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	body,
+	.panel {
+		transition: none;
+	}
+}
+
 /* ─── Scene background (see ADR 0001) ─── */
 .scene-bg {
 	position: fixed;
@@ -1154,7 +1238,6 @@ Append to `src/styles/global.css`:
 
 .scene-bg__alley {
 	background-color: var(--bg-alley);
-	opacity: var(--alley, 0);
 }
 
 [data-scene="scene"] .scene-bg__static,
@@ -1162,20 +1245,16 @@ Append to `src/styles/global.css`:
 	display: none;
 }
 
-/* Text and panels follow the Alley darkening. */
-body {
-	color: color-mix(in oklab, var(--content), var(--content-alley) calc(var(--alley, 0) * 100%));
+.scene-bg__alley {
+	opacity: 0;
 }
 
 .panel {
-	background-color: color-mix(
-		in oklab,
-		color-mix(in oklab, var(--bg), var(--bg-alley) calc(var(--alley, 0) * 100%)) 78%,
-		transparent
-	);
+	background-color: color-mix(in oklab, var(--surface-now) 88%, transparent);
+	transition: background-color 0.6s ease;
 }
 ```
-(The second `.panel` rule overrides only `background-color` from Task 3.)
+(This `.panel` rule overrides only `background-color` from Task 3. The alley layer's opacity is set inline by `gsap.quickSetter`.)
 
 - [ ] **Step 5: Verify in the browser**
 
@@ -1184,8 +1263,11 @@ npx astro check && npm run bp
 ```
 Then, using the agent-browser skill, open `http://localhost:4321/` at 1440×900:
 - Top of page: pale tile grid visible behind the text; Hero text dark.
-- Scroll to the very bottom: background is near-black, Contact text and footer are light and readable.
-- Reload while scrolled to the bottom: ends dark once scripts run (a brief light flash before hydration is acceptable here; Plan B may inline an early `--alley` guess).
+- Scroll to the very bottom: background is near-black; `document.documentElement.dataset.zone === "alley"`; Contact text and footer are light and readable.
+- Scroll slowly back and forth around the Contact section: text colour switches once each way, no flicker.
+- Resize the window while mid-page: darkening stays in step with the sections (refresh re-measured).
+- Reload while scrolled to the bottom: ends dark once scripts run (a brief light flash before hydration is acceptable here; Plan B may inline an early zone guess).
+- DevTools Performance recording while scrolling: no long "Recalculate Style"/"Paint" of the whole page per frame; only the alley layer's opacity changes.
 - Open `/projects`: no tile grid (plain `bg-bg`).
 
 Stop the preview server afterwards.
@@ -1195,7 +1277,7 @@ Stop the preview server afterwards.
 ```bash
 npx biome check --write src/lib/scene src/components/SceneBackground.astro src/layouts src/pages/index.astro src/styles
 git add -A
-git commit -m "feat: static Poolrooms background darkening into the Alley on scroll
+git commit -m "feat: static Poolrooms background darkening into the Alley via ScrollTrigger
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -1215,7 +1297,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `startBackground(deps: { env: Environment; mountScene: () => Promise<void>; setMode: (mode: BackgroundMode) => void }): Promise<BackgroundMode>`
   - `createUBridge(): { push(u: number): void; current(): number; connect(fn: (u: number) => void): void }`
   - `interface Poolrooms { scene: THREE.Scene; setAlley(factor: number): void; update(time: number): void; dispose(): void }`, `createPoolrooms(): Poolrooms` — **Plan C replaces the body of this function, keeping the interface.**
-  - `interface SceneHandle { setU(u: number): void; dispose(): void }`, `mountScene(canvas: HTMLCanvasElement, initialU: number): SceneHandle`
+  - `interface SceneHandle { setU(u: number): void; dispose(): void }`, `mountScene(canvas: HTMLCanvasElement, initialU: number): SceneHandle` — renders on `gsap.ticker` (paused automatically in hidden tabs because the ticker is rAF-based; removed on `dispose`)
   - `<html data-scene="scene|static">`
 
 - [ ] **Step 1: Install Three.js**
@@ -1470,6 +1552,7 @@ export function createPoolrooms(): Poolrooms {
 - [ ] **Step 7: Implement `src/lib/scene/runtime.ts`**
 
 ```ts
+import { gsap } from "gsap";
 import * as THREE from "three";
 import { alleyFactor, damp, PATH_POINTS, pointerLook } from "./path";
 import { createPoolrooms } from "./poolrooms";
@@ -1510,11 +1593,9 @@ export function mountScene(canvas: HTMLCanvasElement, initialU: number): SceneHa
 		);
 	};
 
-	let frame = 0;
-	let last = performance.now();
-	const tick = (now: number) => {
-		const dt = Math.min((now - last) / 1000, 0.1);
-		last = now;
+	// gsap.ticker: time in seconds, deltaTime in ms. The only frame loop on the page.
+	const tick = (time: number, deltaTime: number) => {
+		const dt = Math.min(deltaTime / 1000, 0.1);
 		u = damp(u, targetU, FOLLOW, dt);
 		look.yaw = damp(look.yaw, lookTarget.yaw, FOLLOW, dt);
 		look.pitch = damp(look.pitch, lookTarget.pitch, FOLLOW, dt);
@@ -1527,34 +1608,23 @@ export function mountScene(canvas: HTMLCanvasElement, initialU: number): SceneHa
 		camera.rotateX(look.pitch);
 
 		world.setAlley(alleyFactor(u));
-		world.update(now / 1000);
+		world.update(time);
 		renderer.render(world.scene, camera);
-		frame = requestAnimationFrame(tick);
-	};
-
-	const onVisibility = () => {
-		cancelAnimationFrame(frame);
-		if (!document.hidden) {
-			last = performance.now();
-			frame = requestAnimationFrame(tick);
-		}
 	};
 
 	resize();
 	window.addEventListener("resize", resize);
 	window.addEventListener("pointermove", onPointer, { passive: true });
-	document.addEventListener("visibilitychange", onVisibility);
-	frame = requestAnimationFrame(tick);
+	gsap.ticker.add(tick);
 
 	return {
 		setU(next) {
 			targetU = next;
 		},
 		dispose() {
-			cancelAnimationFrame(frame);
+			gsap.ticker.remove(tick);
 			window.removeEventListener("resize", resize);
 			window.removeEventListener("pointermove", onPointer);
-			document.removeEventListener("visibilitychange", onVisibility);
 			world.dispose();
 			renderer.dispose();
 		},
@@ -1564,20 +1634,30 @@ export function mountScene(canvas: HTMLCanvasElement, initialU: number): SceneHa
 
 - [ ] **Step 8: Wire it in `src/components/SceneBackground.astro`**
 
-Replace the `<script>` block with:
+Replace the `<script>` block from Task 6 with (same zone/opacity wiring, plus the scene):
 ```astro
 <script>
+	import { gsap } from "gsap";
 	import { createUBridge, startBackground } from "../lib/scene/background";
 	import { readEnvironment } from "../lib/scene/capability";
-	import { alleyFactor } from "../lib/scene/path";
+	import { alleyFactor, nextZone, type Zone } from "../lib/scene/path";
 	import { trackScrollU } from "../lib/scene/scroll";
 
 	const root = document.documentElement;
 	const canvas = document.querySelector<HTMLCanvasElement>(".scene-bg__canvas");
+	const alley = document.querySelector<HTMLElement>(".scene-bg__alley");
+	const setAlleyOpacity = alley ? gsap.quickSetter(alley, "opacity") : () => {};
 	const bridge = createUBridge();
+	let zone: Zone = "pool";
 
 	trackScrollU((u) => {
-		root.style.setProperty("--alley", alleyFactor(u).toFixed(3));
+		const factor = alleyFactor(u);
+		setAlleyOpacity(factor);
+		const next = nextZone(zone, factor);
+		if (next !== zone) {
+			zone = next;
+			root.dataset.zone = zone;
+		}
 		bridge.push(u);
 	});
 
@@ -1616,6 +1696,7 @@ Expected: all tests pass; `0 errors`; Three.js appears only in a separate chunk 
 3. **1440×900 with `prefers-reduced-motion: reduce` emulated:** `dataset.scene === "static"`, no canvas visible, tile grid fallback shown.
 4. **390×844 (mobile):** `dataset.scene === "static"`; network panel shows no Three.js chunk requested.
 5. **Console:** no errors in any of the above.
+6. **Performance (1440×900):** DevTools Performance recording while scrolling shows one rAF callback per frame (GSAP ticker) and no whole-page paint per frame.
 
 Stop the preview server afterwards. If step 1 renders but is visibly wrong (e.g. camera inside a wall), adjust `PATH_POINTS` / box positions and re-run — do not change `ANCHOR_U` without re-running `npm test`.
 
