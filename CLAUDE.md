@@ -19,6 +19,8 @@ npx astro check      # TypeScript + Astro type checking
 npm run format       # prettier + biome
 ```
 
+Preview deployment: https://eitaar-dev-v6.eitaar.workers.dev (`npx wrangler@4 deploy`). eitaar.dev still serves v5 until the MVP is complete.
+
 ## Architecture
 
 Astro 7 · Tailwind v4 (`@tailwindcss/vite`) · TypeScript strict · Three.js · GSAP (ScrollTrigger + ticker). Deployed as static assets on Cloudflare Workers (`wrangler.jsonc`).
