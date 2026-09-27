@@ -23,7 +23,8 @@ SECTIONS = [("PassageA", 0.0, 20.0, PASSAGE_R), ("Hall", 20.0, 40.0, HALL_R), ("
 SIDE_OPENINGS = [9.0, 15.0, 50.0, 62.0, 74.0]
 OPEN_R = 0.9  # side-opening arch radius
 OPEN_SPRING = 1.0  # keeps the arch top (1.9 m) below the passage spring
-SKYLIGHTS = [26.0, 34.0]
+SKYLIGHTS = [26.0, 34.0]  # hall
+PASSAGE_SKYLIGHTS = [3.0, 9.0, 15.0, 43.0, 49.0]  # none in the Depths, so the light fails there
 SKY_HALF = 0.8  # half length of a skylight gap along Y
 LADDERS = [(PASSAGE_R, 11.0), (HALL_R, 30.0), (PASSAGE_R, 56.0)]
 CAMERA_PATH = [(0.0, 1.0), (0.3, 14.0), (-0.4, 30.0), (0.2, 46.0), (-0.2, 62.0), (0.0, 78.0)]
@@ -111,7 +112,7 @@ def make_materials(variant):
     sky, bsdf = _material("Sky")
     bsdf.inputs["Base Color"].default_value = (0.0, 0.0, 0.0, 1.0)
     bsdf.inputs["Emission Color"].default_value = (1.0, 0.97, 0.92, 1.0)
-    bsdf.inputs["Emission Strength"].default_value = 6.0
+    bsdf.inputs["Emission Strength"].default_value = 20.0
 
     metal, bsdf = _material("Metal")
     bsdf.inputs["Base Color"].default_value = (0.52, 0.6, 0.68, 1.0)
@@ -225,11 +226,11 @@ def build_side_stub(index, y, radius, mats):
         obj.location = (-radius, y, 0.0)
 
 
-def build_skylight(index, y, mats):
-    """Glowing panel above a crown gap in the hall vault."""
+def build_skylight(index, y, radius, mats):
+    """Glowing panel above a crown gap in a vault."""
     bm, uv = _new_bm()
-    z = SPRING + HALL_R + 0.4
-    half_x = 1.3
+    z = SPRING + radius + 0.4
+    half_x = radius * 0.32
     verts = [bm.verts.new((-half_x, y - SKY_HALF - 0.2, z)), bm.verts.new((half_x, y - SKY_HALF - 0.2, z)),
              bm.verts.new((half_x, y + SKY_HALF + 0.2, z)), bm.verts.new((-half_x, y + SKY_HALF + 0.2, z))]
     _face(bm, uv, verts, [(0, 0), (1, 0), (1, 1), (0, 1)])
@@ -316,7 +317,8 @@ def build_scene(variant="classic"):
     sections = []
     for name, y0, y1, radius in SECTIONS:
         openings = [y for y in SIDE_OPENINGS if y0 < y < y1] if radius == PASSAGE_R else []
-        gaps = [(y - SKY_HALF, y + SKY_HALF) for y in SKYLIGHTS if y0 < y < y1] if name == "Hall" else []
+        lights = SKYLIGHTS if name == "Hall" else PASSAGE_SKYLIGHTS
+        gaps = [(y - SKY_HALF, y + SKY_HALF) for y in lights if y0 < y < y1]
         obj = build_section(name, y0, y1, radius, mats["Tile"], left_openings=openings, crown_gaps=gaps)
         sections.append((obj, y0, y1, radius))
         for i, y in enumerate(openings):
@@ -333,8 +335,9 @@ def build_scene(variant="classic"):
     build_section("FarDoorway", FAR_WALL_Y + 0.2, FAR_WALL_Y + 4.0, 0.9, mats["Void"], spring=1.3)
     build_cap("FarDoorwayEnd", FAR_WALL_Y + 4.0, 0.9, mats["Void"], spring=1.3)
 
-    for i, y in enumerate(SKYLIGHTS):
-        build_skylight(i, y, mats)
+    skylights = [(y, HALL_R) for y in SKYLIGHTS] + [(y, PASSAGE_R) for y in PASSAGE_SKYLIGHTS]
+    for i, (y, radius) in enumerate(skylights):
+        build_skylight(i, y, radius, mats)
     for i, (radius, y) in enumerate(LADDERS):
         build_ladder(i, radius, y, mats["Metal"])
 
