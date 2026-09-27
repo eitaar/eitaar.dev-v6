@@ -27,3 +27,8 @@ pnpm-debug.log*
 .playwright-mcp
 # superpowers plan workspaces
 .superpowers/
+
+# Blender
+*.blend1
+scene/renders/
+__pycache__/

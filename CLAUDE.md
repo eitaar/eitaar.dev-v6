@@ -19,6 +19,17 @@ npx astro check      # TypeScript + Astro type checking
 npm run format       # prettier + biome
 ```
 
+Scene (Blender 5.2, headless via `scene/blender.mjs`; set `BLENDER` if Blender is elsewhere):
+
+```bash
+npm run scene:gen      # first generation of scene/poolrooms.blend (refuses to overwrite without --force)
+npm run scene:export   # sample CameraPath + anchors, write public/scene/poolrooms.glb
+npm run scene:tiles    # render tile variants to scene/renders/
+npm run scene:test     # python unit tests + structural checks inside Blender
+```
+
+After the first generation, `scene/poolrooms.blend` is the source of truth and may be edited by hand in Blender; re-export after edits.
+
 Preview deployment: https://eitaar-dev-v6.eitaar.workers.dev (`npx wrangler@4 deploy`). eitaar.dev still serves v5 until the MVP is complete.
 
 ## Architecture

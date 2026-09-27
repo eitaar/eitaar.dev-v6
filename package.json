@@ -16,7 +16,11 @@
 		"biome:check": "biome check --write",
 		"prettier": "npx prettier . --write",
 		"format": "npx prettier . --write && biome check --write",
-		"test": "vitest run"
+		"test": "vitest run",
+		"scene:gen": "node scene/blender.mjs scene/generate.py",
+		"scene:export": "node scene/blender.mjs --blend scene/poolrooms.blend scene/export.py",
+		"scene:tiles": "node scene/blender.mjs --blend scene/poolrooms.blend scene/render_tiles.py",
+		"scene:test": "python -m unittest discover -s scene/tests -p \"test_*.py\" && node scene/blender.mjs --blend scene/poolrooms.blend scene/tests/check_blend.py"
 	},
 	"dependencies": {
 		"@astrojs/mdx": "^7.0.3",
