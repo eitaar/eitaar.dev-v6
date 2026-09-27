@@ -6,12 +6,16 @@
 
 <script>
 	import { gsap } from "gsap";
+	import { createUBridge, startBackground } from "../lib/scene/background";
+	import { readEnvironment } from "../lib/scene/capability";
 	import { alleyFactor, nextZone, type Zone } from "../lib/scene/path";
 	import { trackScrollU } from "../lib/scene/scroll";
 
 	const root = document.documentElement;
+	const canvas = document.querySelector<HTMLCanvasElement>(".scene-bg__canvas");
 	const alley = document.querySelector<HTMLElement>(".scene-bg__alley");
 	const setAlleyOpacity = alley ? gsap.quickSetter(alley, "opacity") : () => {};
+	const bridge = createUBridge();
 	let zone: Zone = "pool";
 
 	trackScrollU((u) => {
@@ -22,5 +26,21 @@
 			zone = next;
 			root.dataset.zone = zone;
 		}
+		bridge.push(u);
 	});
+
+	if (canvas) {
+		startBackground({
+			env: readEnvironment(),
+			mountScene: async () => {
+				const { mountScene } = await import("../lib/scene/runtime");
+				const handle = mountScene(canvas, bridge.current());
+				bridge.connect((u) => handle.setU(u));
+				canvas.hidden = false;
+			},
+			setMode: (mode) => {
+				root.dataset.scene = mode;
+			},
+		});
+	}
 </script>
