@@ -38,7 +38,7 @@ describe("poolrooms.glb", () => {
 		for (const key of ["pool", "depths"] as const) {
 			const node = byName.get(`anchor_${key}`);
 			expect(node, `anchor_${key}`).toBeDefined();
-			expect(polylineU(path, node?.translation ?? [0, 0, 0])).toBeCloseTo(anchors[key], 1);
+			expect(polylineU(path, node?.translation ?? [0, 0, 0])).toBeCloseTo(anchors[key], 3);
 		}
 	});
 

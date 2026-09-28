@@ -1,6 +1,7 @@
 import { gsap } from "gsap";
 import * as THREE from "three";
 import { createPathCamera } from "./camera";
+import { loadWhileAlive } from "./mount";
 import { damp, depthsExposure, depthsFactor, pointerLook } from "./path";
 import { loadPoolrooms, type Poolrooms, SCENE_URL } from "./poolrooms";
 
@@ -21,13 +22,17 @@ export async function mountScene(
 	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 	renderer.toneMapping = THREE.AgXToneMapping;
 
-	let world: Poolrooms;
-	try {
-		world = await loadPoolrooms(url);
-	} catch (error) {
-		renderer.dispose();
-		throw error;
-	}
+	const world: Poolrooms = await loadWhileAlive(
+		{
+			isLost: () => renderer.getContext().isContextLost(),
+			dispose: () => {
+				renderer.dispose();
+				renderer.forceContextLoss();
+			},
+		},
+		() => loadPoolrooms(url),
+		(loaded) => loaded.dispose(),
+	);
 
 	const camera = new THREE.PerspectiveCamera(60, 1, 0.05, 200);
 	const pathCamera = createPathCamera(world.path);
